@@ -7,7 +7,8 @@ Hier trainieren, validieren, attackieren, verteidigen und evaluiren wir unsere M
 
 1. Klone das Repository.
 2. Installiere die benötigten Python Packages mit `make reqs` oder `make reqs-cuda`.
-3. Lade die Daten mittel `TODO` runter und lege diese in den Ordner `data/raw/<Datensatzname>` ab.
+3. Erstelle einen Kaggle API Access Token und lege ihn ab unter `~/.kaggle/kaggle.json`. Die Anleitung dafür findet man [hier](https://www.kaggle.com/docs/api).
+4. Lade die Daten herunter. Dies kann mit den Download Befehlen im Makefile gemacht werden. Diese können unter `make help` eingesehen werden.
  
 ## Projektstruktur
 
