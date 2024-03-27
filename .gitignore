@@ -1,5 +1,6 @@
 # Data
 data/
+!src/data/
 !data/README.md
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
