@@ -8,6 +8,7 @@ class ImageClassifier(torch.nn.Module):
         self.modelname = modelname
         self.output_size = output_size
         self.p_dropout_classifier = p_dropout_classifier
+        self.resize = None
 
         try:
             # check if model exists
@@ -33,7 +34,9 @@ class ImageClassifier(torch.nn.Module):
             # replace the last classifier layer on vgg
             elif modelname.startswith("vgg"):
                 self.model.classifier[-2] = torch.nn.Dropout(p=p_dropout_classifier)
-                self.model.classifier[-1] = torch.nn.Linear(self.model.classifier[-1].in_features, output_size)
+                self.model.classifier[-1] = torch.nn.Linear(
+                    self.model.classifier[-1].in_features, output_size
+                )
 
             # replace the fc layer on resnet
             elif modelname.startswith("resnet"):

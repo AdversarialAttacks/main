@@ -35,7 +35,7 @@ class MRIDataset(torch.utils.data.Dataset):
         self.shuffle = shuffle
         self.seed = seed
 
-        self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
+        self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=",", header=None)
         self.data.columns = ["filename", "class", "label"]
         if shuffle:
             self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(drop=True)
