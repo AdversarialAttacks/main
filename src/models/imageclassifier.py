@@ -1,14 +1,22 @@
 import torch
 import torchvision
+import torch.optim as optim
+import lightning as L
+from torchmetrics import Accuracy
 
 
-class ImageClassifier(torch.nn.Module):
-    def __init__(self, modelname, output_size, p_dropout_classifier):
+class ImageClassifier(L.LightningModule):
+    def __init__(
+        self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0
+    ):
         super().__init__()
         self.modelname = modelname
         self.output_size = output_size
         self.p_dropout_classifier = p_dropout_classifier
         self.resize = None
+        self.lr = lr
+        self.weight_decay = weight_decay
+        self.accuracy = Accuracy()
 
         try:
             # check if model exists
@@ -80,3 +88,33 @@ class ImageClassifier(torch.nn.Module):
             x = self.resize(x)
 
         return self.model(x)
+
+    def predict(self, x):
+        self.eval()
+        return self.forward(x)
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.cross_entropy(y_hat, y)
+        acc = self.accuracy(y_hat, y)
+        self.log("train_loss", loss)
+        self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.cross_entropy(y_hat, y)
+        acc = self.accuracy(y_hat, y)
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", acc, prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        acc = self.accuracy(y_hat, y)
+        self.log("test_acc", acc)
+
+    def configure_optimizers(self):
+        return optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
