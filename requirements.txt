@@ -1,4 +1,5 @@
-torch==2.2.1
-torchaudio==2.2.1
-torchvision==0.17.1
-kaggle==1.6.6
+lightning==2.2.1
+matplotlib==3.8.2
+pandas==2.2.1
+torch==2.2.2
+torchvision==0.17.2
