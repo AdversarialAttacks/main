@@ -14,9 +14,9 @@ class ImageClassifier(L.LightningModule):
         self.modelname = modelname
         self.output_size = output_size
         self.p_dropout_classifier = p_dropout_classifier
-        self.resize = None
         self.lr = lr
         self.weight_decay = weight_decay
+        self.resize = None
 
         self.metrics = metrics
         self.logging = {
@@ -97,13 +97,12 @@ class ImageClassifier(L.LightningModule):
         if self.resize:
             x = self.resize(x)
 
-        result = self.model(x)
-        result = torch.sigmoid(result)
-        return result
+        return self.model(x)
 
     def predict(self, x):
         self.eval()
-        return self.forward(x)
+        y_hat = self.forward(x)
+        return torch.sigmoid(y_hat)
 
     def __step(self, batch, state):
         x, y = batch
@@ -113,8 +112,7 @@ class ImageClassifier(L.LightningModule):
         self.logging[f"{state}_prediction"].append(y_hat)
         self.logging[f"{state}_target"].append(y)
         
-        loss = torch.nn.functional.binary_cross_entropy(y_hat, y)
-        return loss
+        return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
     def training_step(self, batch, _):
         return self.__step(batch, "train")  # Loss
@@ -130,6 +128,7 @@ class ImageClassifier(L.LightningModule):
 
     def __on_epoch_end(self, state):
         predictions = torch.cat(self.logging[f"{state}_prediction"])
+        predictions = torch.sigmoid(predictions)
         targets = torch.cat(self.logging[f"{state}_target"])
         
         loss = torch.nn.functional.binary_cross_entropy(predictions, targets)
