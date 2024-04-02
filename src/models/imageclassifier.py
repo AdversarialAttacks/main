@@ -110,11 +110,10 @@ class ImageClassifier(L.LightningModule):
         y = y.float()
         y_hat = self(x).squeeze(1).float()
 
-        loss = torch.nn.functional.binary_cross_entropy(y_hat, y)
-        self.log(f"{state}_loss", loss)
-
         self.logging[f"{state}_prediction"].append(y_hat)
         self.logging[f"{state}_target"].append(y)
+        
+        loss = torch.nn.functional.binary_cross_entropy(y_hat, y)
         return loss
 
     def training_step(self, batch, _):
@@ -131,10 +130,17 @@ class ImageClassifier(L.LightningModule):
 
     def __on_epoch_end(self, state):
         predictions = torch.cat(self.logging[f"{state}_prediction"])
-        targets = torch.cat(self.logging[f"{state}_target"]).int()
-        metrics_dict = self.metrics(predictions, targets)
+        targets = torch.cat(self.logging[f"{state}_target"])
+        
+        loss = torch.nn.functional.binary_cross_entropy(predictions, targets)
+        self.log(f"{state}_loss", loss)
+        
+        metrics_dict = self.metrics(predictions, targets.int())
         for metric, value in metrics_dict.items():
             self.log(f"{state}_{metric}", value)
+            
+        self.logging[f"{state}_prediction"] = []
+        self.logging[f"{state}_target"] = []
 
     def on_train_epoch_end(self):
         self.__on_epoch_end("train")
