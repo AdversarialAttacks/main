@@ -35,7 +35,7 @@ class MRIDataset(torch.utils.data.Dataset):
         self.shuffle = shuffle
         self.seed = seed
 
-        self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=",", header=None)
+        self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
         self.data.columns = ["filename", "class", "label"]
         if shuffle:
             self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(drop=True)
@@ -59,7 +59,7 @@ class MRIDataset(torch.utils.data.Dataset):
         image = torchvision.io.read_image(filename, mode=torchvision.io.image.ImageReadMode.GRAY)
         image = image.float() / 255.0
         image = image.expand(3, -1, -1)
-        label = row["label"]
+        label = row["label"].astype("int")
         if self.transform:
             image = self.transform(image)
         return image, label

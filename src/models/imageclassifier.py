@@ -6,9 +6,7 @@ from torchmetrics import Accuracy
 
 
 class ImageClassifier(L.LightningModule):
-    def __init__(
-        self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0
-    ):
+    def __init__(self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0):
         super().__init__()
         self.modelname = modelname
         self.output_size = output_size
@@ -16,7 +14,7 @@ class ImageClassifier(L.LightningModule):
         self.resize = None
         self.lr = lr
         self.weight_decay = weight_decay
-        self.accuracy = Accuracy()
+        self.accuracy = Accuracy(task="binary")
 
         try:
             # check if model exists
@@ -42,9 +40,7 @@ class ImageClassifier(L.LightningModule):
             # replace the last classifier layer on vgg
             elif modelname.startswith("vgg"):
                 self.model.classifier[-2] = torch.nn.Dropout(p=p_dropout_classifier)
-                self.model.classifier[-1] = torch.nn.Linear(
-                    self.model.classifier[-1].in_features, output_size
-                )
+                self.model.classifier[-1] = torch.nn.Linear(self.model.classifier[-1].in_features, output_size)
 
             # replace the fc layer on resnet
             elif modelname.startswith("resnet"):
@@ -87,33 +83,35 @@ class ImageClassifier(L.LightningModule):
         if self.resize:
             x = self.resize(x)
 
-        return self.model(x)
+        result = self.model(x)
+        result = torch.sigmoid(result)
+        return result
 
     def predict(self, x):
         self.eval()
         return self.forward(x)
 
-    def training_step(self, batch, batch_idx):
+    def __step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self(x)
-        loss = torch.nn.functional.cross_entropy(y_hat, y)
+        y = y.float()
+        y_hat = self(x).squeeze(1).float()
+        loss = torch.nn.functional.binary_cross_entropy(y_hat, y)
         acc = self.accuracy(y_hat, y)
+        return loss, acc
+
+    def training_step(self, batch, batch_idx):
+        loss, acc = self.__step(batch, batch_idx)
         self.log("train_loss", loss)
         self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = torch.nn.functional.cross_entropy(y_hat, y)
-        acc = self.accuracy(y_hat, y)
+        loss, acc = self.__step(batch, batch_idx)
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        acc = self.accuracy(y_hat, y)
+        loss, acc = self.__step(batch, batch_idx)
         self.log("test_acc", acc)
 
     def configure_optimizers(self):
