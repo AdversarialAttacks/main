@@ -22,7 +22,7 @@ reqs:
 ## Install Python Dependencies for CUDA
 reqs-cuda:
 	pip3 install torch==2.2.2 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-	pip3 install -r requirements.txt
+	pip3 install -r requirements-gpu.txt
 
 ## Download COVIDx-CXR4 Dataset
 dl-covid:
