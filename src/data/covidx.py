@@ -137,24 +137,24 @@ class COVIDXDataModule(L.LightningDataModule):
     def train_dataloader(self):
         """Returns a DataLoader for the training dataset."""
         return torch.utils.data.DataLoader(
-            self.train_dataset, 
-            batch_size=self.batch_size, 
-            num_workers=self.num_workers, 
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
             shuffle=self.train_shuffle,
         )
 
     def val_dataloader(self):
         """Returns a DataLoader for the validation dataset."""
         return torch.utils.data.DataLoader(
-            self.val_dataset, 
-            batch_size=self.batch_size, 
+            self.val_dataset,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
 
     def test_dataloader(self):
         """Returns a DataLoader for the test dataset."""
         return torch.utils.data.DataLoader(
-            self.test_dataset, 
-            batch_size=self.batch_size, 
+            self.test_dataset,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
         )

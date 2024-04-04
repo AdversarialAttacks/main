@@ -7,9 +7,7 @@ from src.utils.metrics import metrics
 
 
 class ImageClassifier(L.LightningModule):
-    def __init__(
-        self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0
-    ):
+    def __init__(self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0):
         super().__init__()
         self.modelname = modelname
         self.output_size = output_size
@@ -52,9 +50,7 @@ class ImageClassifier(L.LightningModule):
             # replace the last classifier layer on vgg
             elif modelname.startswith("vgg"):
                 self.model.classifier[-2] = torch.nn.Dropout(p=p_dropout_classifier)
-                self.model.classifier[-1] = torch.nn.Linear(
-                    self.model.classifier[-1].in_features, output_size
-                )
+                self.model.classifier[-1] = torch.nn.Linear(self.model.classifier[-1].in_features, output_size)
 
             # replace the fc layer on resnet
             elif modelname.startswith("resnet"):
@@ -111,7 +107,7 @@ class ImageClassifier(L.LightningModule):
 
         self.logging[f"{state}_prediction"].append(y_hat)
         self.logging[f"{state}_target"].append(y)
-        
+
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
     def training_step(self, batch, _):
@@ -130,14 +126,14 @@ class ImageClassifier(L.LightningModule):
         predictions = torch.cat(self.logging[f"{state}_prediction"])
         predictions = torch.sigmoid(predictions)
         targets = torch.cat(self.logging[f"{state}_target"])
-        
+
         loss = torch.nn.functional.binary_cross_entropy(predictions, targets)
         self.log(f"{state}_loss", loss)
-        
+
         metrics_dict = self.metrics(predictions, targets.int())
         for metric, value in metrics_dict.items():
             self.log(f"{state}_{metric}", value)
-            
+
         self.logging[f"{state}_prediction"] = []
         self.logging[f"{state}_target"] = []
 

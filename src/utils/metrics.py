@@ -10,4 +10,3 @@ metrics = torchmetrics.MetricCollection(
         torchmetrics.AUROC(task="binary"),
     ]
 )
-

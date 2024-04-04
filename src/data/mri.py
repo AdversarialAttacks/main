@@ -120,7 +120,9 @@ class MRIDataModule(L.LightningDataModule):
             self._copy_files()
             self._generate_labels_files()
 
-        self.train_dataset = MRIDataset(self.path_processed, "train", transform=self.transform, shuffle=self.train_shuffle)
+        self.train_dataset = MRIDataset(
+            self.path_processed, "train", transform=self.transform, shuffle=self.train_shuffle
+        )
         self.val_dataset = MRIDataset(self.path_processed, "val", transform=self.transform)
         self.test_dataset = MRIDataset(self.path_processed, "test", transform=self.transform)
         return self
@@ -128,26 +130,26 @@ class MRIDataModule(L.LightningDataModule):
     def train_dataloader(self):
         """Returns a DataLoader for the training dataset."""
         return torch.utils.data.DataLoader(
-            self.train_dataset, 
-            batch_size=self.batch_size, 
-            num_workers=self.num_workers, 
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
             shuffle=self.train_shuffle,
         )
 
     def val_dataloader(self):
         """Returns a DataLoader for the validation dataset."""
         return torch.utils.data.DataLoader(
-            self.val_dataset, 
+            self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.num_workers, 
+            num_workers=self.num_workers,
         )
 
     def test_dataloader(self):
         """Returns a DataLoader for the test dataset."""
         return torch.utils.data.DataLoader(
-            self.test_dataset, 
+            self.test_dataset,
             batch_size=self.batch_size,
-            num_workers=self.num_workers, 
+            num_workers=self.num_workers,
         )
 
     def _copy_files(self):
