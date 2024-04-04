@@ -25,18 +25,20 @@ class COVIDXDataset(torch.utils.data.Dataset):
         split,
         transform=None,
         shuffle=False,
+        sample_size=1,
         seed=None,
     ):
         self.path = path
         self.split = split
         self.transform = transform
         self.shuffle = shuffle
+        self.sample_size = sample_size
         self.seed = seed
 
         self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
         self.data.columns = ["pid", "filename", "class", "source"]
         if shuffle:
-            self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(drop=True)
+            self.data = self.data.sample(frac=self.sample_size, random_state=self.seed).reset_index(drop=True)
 
     def __len__(self):
         """Returns the number of items in the dataset."""
@@ -86,14 +88,18 @@ class COVIDXDataModule(L.LightningDataModule):
         path="data/raw/COVIDX-CXR4",
         transform=None,
         batch_size=32,
+        num_workers=0,
         train_shuffle=False,
+        train_sample_size=1,
         seed=None,
     ):
         super().__init__()
         self.path = path
         self.transform = transform
         self.batch_size = batch_size
+        self.num_workers = num_workers
         self.train_shuffle = train_shuffle
+        self.train_sample_size = train_sample_size
         self.seed = seed
         if seed:
             torch.manual_seed(seed)
@@ -110,6 +116,7 @@ class COVIDXDataModule(L.LightningDataModule):
             split="train",
             transform=self.transform,
             shuffle=self.train_shuffle,
+            sample_size=self.train_sample_size,
             seed=self.seed,
         )
 
@@ -129,12 +136,25 @@ class COVIDXDataModule(L.LightningDataModule):
 
     def train_dataloader(self):
         """Returns a DataLoader for the training dataset."""
-        return torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.train_shuffle)
+        return torch.utils.data.DataLoader(
+            self.train_dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            shuffle=self.train_shuffle,
+        )
 
     def val_dataloader(self):
         """Returns a DataLoader for the validation dataset."""
-        return torch.utils.data.DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(
+            self.val_dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers,
+        )
 
     def test_dataloader(self):
         """Returns a DataLoader for the test dataset."""
-        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(
+            self.test_dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers,
+        )

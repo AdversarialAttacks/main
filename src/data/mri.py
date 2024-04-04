@@ -91,6 +91,7 @@ class MRIDataModule(L.LightningDataModule):
         path_processed="data/processed/Brain-Tumor-MRI",
         transform=None,
         batch_size=32,
+        num_workers=0,
         train_val_ratio=0.8,
         train_shuffle=False,
         seed=None,
@@ -100,6 +101,7 @@ class MRIDataModule(L.LightningDataModule):
         self.path_processed = path_processed
         self.transform = transform
         self.batch_size = batch_size
+        self.num_workers = num_workers
         self.train_val_ratio = train_val_ratio
         self.train_shuffle = train_shuffle
         self.seed = seed
@@ -118,24 +120,35 @@ class MRIDataModule(L.LightningDataModule):
             self._copy_files()
             self._generate_labels_files()
 
-        self.train_dataset = MRIDataset(
-            self.path_processed, "train", transform=self.transform, shuffle=self.train_shuffle
-        )
+        self.train_dataset = MRIDataset(self.path_processed, "train", transform=self.transform, shuffle=self.train_shuffle)
         self.val_dataset = MRIDataset(self.path_processed, "val", transform=self.transform)
         self.test_dataset = MRIDataset(self.path_processed, "test", transform=self.transform)
         return self
 
     def train_dataloader(self):
         """Returns a DataLoader for the training dataset."""
-        return torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return torch.utils.data.DataLoader(
+            self.train_dataset, 
+            batch_size=self.batch_size, 
+            num_workers=self.num_workers, 
+            shuffle=self.train_shuffle,
+        )
 
     def val_dataloader(self):
         """Returns a DataLoader for the validation dataset."""
-        return torch.utils.data.DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(
+            self.val_dataset, 
+            batch_size=self.batch_size,
+            num_workers=self.num_workers, 
+        )
 
     def test_dataloader(self):
         """Returns a DataLoader for the test dataset."""
-        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(
+            self.test_dataset, 
+            batch_size=self.batch_size,
+            num_workers=self.num_workers, 
+        )
 
     def _copy_files(self):
         """Copies and organizes files into train, val, and test directories."""
