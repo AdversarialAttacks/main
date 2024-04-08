@@ -7,7 +7,9 @@ from src.utils.metrics import metrics
 
 
 class ImageClassifier(L.LightningModule):
-    def __init__(self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0):
+    def __init__(
+        self, modelname, output_size, p_dropout_classifier, lr=0.01, weight_decay=0
+    ):
         super().__init__()
         self.modelname = modelname
         self.output_size = output_size
@@ -50,7 +52,9 @@ class ImageClassifier(L.LightningModule):
             # replace the last classifier layer on vgg
             elif modelname.startswith("vgg"):
                 self.model.classifier[-2] = torch.nn.Dropout(p=p_dropout_classifier)
-                self.model.classifier[-1] = torch.nn.Linear(self.model.classifier[-1].in_features, output_size)
+                self.model.classifier[-1] = torch.nn.Linear(
+                    self.model.classifier[-1].in_features, output_size
+                )
 
             # replace the fc layer on resnet
             elif modelname.startswith("resnet"):
@@ -93,7 +97,9 @@ class ImageClassifier(L.LightningModule):
         if self.resize:
             x = self.resize(x)
 
-        return self.model(x)
+        y_hat = self.model(x)
+        y_hat = torch.clamp(y_hat, min=-1e5, max=1e5)
+        return y_hat
 
     def predict(self, x):
         self.eval()
