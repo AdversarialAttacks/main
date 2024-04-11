@@ -1,6 +1,0 @@
-lightning==2.2.1
-matplotlib==3.8.2
-pandas==2.2.1
-wandb==0.16.5
-kaggle==1.6.8
-jupyter==1.0.0
