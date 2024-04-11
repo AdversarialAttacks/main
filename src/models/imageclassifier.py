@@ -98,7 +98,7 @@ class ImageClassifier(L.LightningModule):
             x = self.resize(x)
 
         y_hat = self.model(x)
-        y_hat = torch.clamp(y_hat, min=-1e5, max=1e5)
+        y_hat = torch.clamp(y_hat, min=-9, max=9)
         return y_hat
 
     def predict(self, x):
