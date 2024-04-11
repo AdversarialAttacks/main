@@ -1,4 +1,4 @@
-.PHONY: help reqs reqs-cuda dl-brain-tumor dl-covid
+ lam.PHONY: help reqs dl-brain-tumor dl-covid lambda-setup
 
 ## Show this help message
 help:
@@ -11,6 +11,8 @@ help:
 	@echo "		Download COVIDx-CXR4 Dataset"
 	@echo "dl-brain-tumor"
 	@echo "		Download Brain Tumor MRI Dataset"
+	@echo "lambda-setup"
+	@echo "		Setup Lambda Cloud for Training"
 	@echo ""
 
 ## Install Python Dependencies
@@ -29,6 +31,14 @@ dl-covid:
 ## Download Brain Tumor MRI Dataset
 dl-brain-tumor:
 	kaggle datasets download -d sartajbhuvaji/brain-tumor-classification-mri -p data/raw/Brain-Tumor-MRI --unzip 
+
+## Setup Lambda Cloud for Training
+lambda-setup:
+	mkdir ../.kaggle
+	mv kaggle.json ../.kaggle/kaggle.json
+	make reqs
+	make dl-brain-tumor
+	make dl-covid
 
 # Set the default goal to `help`
 .DEFAULT_GOAL := help
