@@ -38,9 +38,7 @@ class MRIDataset(torch.utils.data.Dataset):
         self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
         self.data.columns = ["filename", "class", "label"]
         if shuffle:
-            self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(
-                drop=True
-            )
+            self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(drop=True)
 
     def __len__(self):
         """Returns the number of items in the dataset."""
@@ -58,10 +56,8 @@ class MRIDataset(torch.utils.data.Dataset):
         """
         row = self.data.iloc[idx]
         filename = f"{self.path}/{self.split}/{row['filename']}"
-        image = torchvision.io.read_image(
-            filename, mode=torchvision.io.image.ImageReadMode.GRAY
-        )
-        image = image.int()
+        image = torchvision.io.read_image(filename, mode=torchvision.io.image.ImageReadMode.GRAY)
+        image = image.int().float()
         image = image.expand(3, -1, -1)
         label = row["label"].astype("int")
         if self.transform:
@@ -130,12 +126,8 @@ class MRIDataModule(L.LightningDataModule):
             transform=self.transform,
             shuffle=self.train_shuffle,
         )
-        self.val_dataset = MRIDataset(
-            self.path_processed, "val", transform=self.transform
-        )
-        self.test_dataset = MRIDataset(
-            self.path_processed, "test", transform=self.transform
-        )
+        self.val_dataset = MRIDataset(self.path_processed, "val", transform=self.transform)
+        self.test_dataset = MRIDataset(self.path_processed, "test", transform=self.transform)
         return self
 
     def train_dataloader(self):
