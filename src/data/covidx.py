@@ -57,7 +57,7 @@ class COVIDXDataset(torch.utils.data.Dataset):
         row = self.data.iloc[idx]
         filename = f"{self.path}/{self.split}/{row['filename']}"
         image = torchvision.io.read_image(filename, mode=torchvision.io.image.ImageReadMode.GRAY)
-        image = image.float() / 255.0
+        image = image.int()
         image = image.expand(3, -1, -1)
         label = (row["class"] == "positive") * 1
         if self.transform:
