@@ -197,3 +197,4 @@ pyrightconfig.json
 # wandb
 wandb/
 baselines/
+models/

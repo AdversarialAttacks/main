@@ -14,8 +14,8 @@ class ImageClassifier(L.LightningModule):
         p_dropout_classifier,
         lr=0.01,
         weight_decay=0,
-        first_unfreeze_epoch=0,
-        second_unfreeze_epoch=0,
+        # first_unfreeze_epoch=0,
+        # second_unfreeze_epoch=0,
     ):
         super().__init__()
         self.modelname = modelname
@@ -23,8 +23,8 @@ class ImageClassifier(L.LightningModule):
         self.p_dropout_classifier = p_dropout_classifier
         self.lr = lr
         self.weight_decay = weight_decay
-        self.first_unfreeze_epoch = first_unfreeze_epoch
-        self.second_unfreeze_epoch = second_unfreeze_epoch
+        # self.first_unfreeze_epoch = first_unfreeze_epoch
+        # self.second_unfreeze_epoch = second_unfreeze_epoch
 
         self.resize = None
 
@@ -50,7 +50,7 @@ class ImageClassifier(L.LightningModule):
 
             # unfreeze all the layers (they probably already are xD)
             for param in self.model.parameters():
-                param.requires_grad = False
+                param.requires_grad = True
 
             # replace the last classifier layer on alexnet
             if modelname.startswith("alexnet"):
@@ -101,13 +101,13 @@ class ImageClassifier(L.LightningModule):
             self.layers = list(self.model.children())
             self.total_layers = len(self.layers)
 
-            if self.first_unfreeze_epoch == 0:
-                self.unfreeze_layers(0.5)
-                print("Unfreezing 50% of the layers")
+            # if self.first_unfreeze_epoch == 0:
+            #    self.unfreeze_layers(0.5)
+            #    print("Unfreezing 50% of the layers")
 
-            if self.second_unfreeze_epoch == 0:
-                self.unfreeze_layers(1.0)
-                print("Unfreezing 100% of the layers")
+            # if self.second_unfreeze_epoch == 0:
+            #    self.unfreeze_layers(1.0)
+            #    print("Unfreezing 100% of the layers")
 
         except Exception as e:
             raise ValueError(f"Cannot load model {modelname}!") from e
@@ -142,16 +142,19 @@ class ImageClassifier(L.LightningModule):
         return torch.nn.functional.binary_cross_entropy_with_logits(y_hat, y)
 
     def training_step(self, batch, _):
+        self.train()
         return self.__step(batch, "train")  # Loss
 
     def validation_step(self, batch, _):
+        self.eval()
         return self.__step(batch, "val")  # Loss
 
     def test_step(self, batch, _):
+        self.eval()
         return self.__step(batch, "test")  # Loss
 
     def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        return optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
 
     def __on_epoch_end(self, state):
         predictions = torch.cat(self.logging[f"{state}_prediction"])
@@ -171,13 +174,13 @@ class ImageClassifier(L.LightningModule):
     def on_train_epoch_end(self):
         self.__on_epoch_end("train")
 
-        if (self.current_epoch - 1) == self.first_unfreeze_epoch:
-            self.unfreeze_layers(0.5)
-            print("Unfreezing 50% of the layers")
+        # if (self.current_epoch - 1) == self.first_unfreeze_epoch:
+        #    self.unfreeze_layers(0.5)
+        #    print("Unfreezing 50% of the layers")
 
-        if (self.current_epoch - 1) == self.second_unfreeze_epoch:
-            self.unfreeze_layers(1.0)
-            print("Unfreezing 100% of the layers")
+        # if (self.current_epoch - 1) == self.second_unfreeze_epoch:
+        #    self.unfreeze_layers(1.0)
+        #    print("Unfreezing 100% of the layers")
 
     def on_validation_epoch_end(self):
         self.__on_epoch_end("val")
