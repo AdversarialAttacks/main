@@ -13,6 +13,7 @@ class WeightsandBiasEval:
         self.project_name = entity_project_name
         self.runs_df = None
         self.config = None
+        self.w_b_df = None
 
     def fetch_runs(self):
         """
@@ -56,6 +57,57 @@ class WeightsandBiasEval:
             [pd.DataFrame([d]) for d in self.runs_df["config"]], ignore_index=True
         )
         return self.config
+
+
+    def get_full_metrics_df(self):
+        """
+        Constructs and returns a full Dataframe of all run metrics
+        """
+        if self.runs_df is None:
+            raise ValueError("No runs data available. Please fetch the runs first.")
+        
+        config_df = self.get_full_config_df()
+
+        metrics = [
+            "train_BinaryAUROC", 
+            "train_BinaryAccuracy", 
+            "train_BinaryF1Score", 
+            "train_BinaryPrecision", 
+            "train_BinaryRecall", 
+            "train_BinarySpecificity", 
+            "train_loss", 
+            "val_BinaryAUROC", 
+            "val_BinaryAccuracy", 
+            "val_BinaryF1Score", 
+            "val_BinaryPrecision", 
+            "val_BinaryRecall", 
+            "val_BinarySpecificity", 
+            "val_loss",
+            ]
+        
+        result_df = pd.DataFrame(columns=metrics)
+        
+        for i in range(len(self.runs_df)):
+            first_row = self.runs_df["summary"].iloc[i]
+
+            # create a dict with key (metric) and its value in first_row
+            dict = {}
+            for metric in metrics:
+                dict[metric] = first_row[metric]
+
+            # turn dict into dataframe 
+            temp_df = pd.DataFrame(dict, index=[0])
+
+            # concat to result_df and emptu temp_df
+            result_df = pd.concat([result_df, temp_df], ignore_index=True)
+
+        # concat result_df with config_df
+        result_df = pd.concat([config_df, result_df], axis=1)
+
+        self.w_b_df = result_df
+        return self.w_b_df
+
+
 
     def get_best_run(self, sweep_id):
         """
