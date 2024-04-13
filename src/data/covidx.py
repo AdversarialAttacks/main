@@ -38,7 +38,9 @@ class COVIDXDataset(torch.utils.data.Dataset):
         self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
         self.data.columns = ["pid", "filename", "class", "source"]
         if shuffle:
-            self.data = self.data.sample(frac=self.sample_size, random_state=self.seed).reset_index(drop=True)
+            self.data = self.data.sample(
+                frac=self.sample_size, random_state=self.seed
+            ).reset_index(drop=True)
 
     def __len__(self):
         """Returns the number of items in the dataset."""
@@ -56,7 +58,9 @@ class COVIDXDataset(torch.utils.data.Dataset):
         """
         row = self.data.iloc[idx]
         filename = f"{self.path}/{self.split}/{row['filename']}"
-        image = torchvision.io.read_image(filename, mode=torchvision.io.image.ImageReadMode.GRAY)
+        image = torchvision.io.read_image(
+            filename, mode=torchvision.io.image.ImageReadMode.GRAY
+        )
         image = image.int().float()
         image = image.expand(3, -1, -1)
         label = (row["class"] == "positive") * 1
@@ -141,6 +145,7 @@ class COVIDXDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=self.train_shuffle,
+            persistent_workers=True,
         )
 
     def val_dataloader(self):
@@ -149,6 +154,7 @@ class COVIDXDataModule(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            persistent_workers=True,
         )
 
     def test_dataloader(self):
@@ -157,4 +163,5 @@ class COVIDXDataModule(L.LightningDataModule):
             self.test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            persistent_workers=True,
         )
