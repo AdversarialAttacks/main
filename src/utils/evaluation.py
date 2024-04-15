@@ -11,10 +11,6 @@ class WeightsandBiasEval:
         """
         self.api = wandb.Api()
         self.project_name = entity_project_name
-
-        self.last_runs = None
-        self.best_epochs = None
-
         self.metrics = [
             "train_BinaryAUROC",
             "train_BinaryAccuracy",
@@ -32,6 +28,9 @@ class WeightsandBiasEval:
             "val_loss",
         ]
 
+        self.last_runs = None
+        self.best_epochs = None
+
         self.fetch_runs()
         self.get_config()
 
@@ -40,81 +39,60 @@ class WeightsandBiasEval:
         Fetches all runs from the specified project and constructs a DataFrame.
         """
         runs = self.api.runs(self.project_name)
-        summary_list, config_list, name_list, id_list = [], [], [], []
+        data = {
+            "id": [run.id for run in runs],
+            "name": [run.name for run in runs],
+            "config": [{k: v for k, v in run.config.items() if not k.startswith("_")} for run in runs],
+            "summary": [run.summary._json_dict for run in runs],
+        }
+        self.runs_df = pd.DataFrame(data)
 
-        for run in runs:
-            summary_list.append(run.summary._json_dict)
-            config_list.append(
-                {k: v for k, v in run.config.items() if not k.startswith("_")}
-            )
-            name_list.append(run.name)
-            id_list.append(run.id)
-
-        self.runs_df = pd.DataFrame(
-            {
-                "summary": summary_list,
-                "config": config_list,
-                "name": name_list,
-                "id": id_list,
-            }
-        )
+        return self.runs_df
 
     def get_config(self):
         """
         Constructs and returns a full DataFrame of all run configurations.
         """
-        self.config = pd.concat(
-            [pd.DataFrame([d]) for d in self.runs_df["config"]], ignore_index=True
-        )
+        self.config = self.runs_df["config"].apply(pd.Series)
         self.config["id"] = self.runs_df["id"]
+
         return self.config
 
     def get_last_runs(self):
         """
         Constructs and returns the last runs for each configuration.
         """
-        result_df = pd.DataFrame(columns=self.metrics)
-
-        for i in range(len(self.runs_df)):
-            first_row = self.runs_df["summary"].iloc[i]
-
-            dict = {}
-            for metric in self.metrics:
-                dict[metric] = first_row[metric]
-
-            temp_df = pd.DataFrame(dict, index=[0])
-
-            result_df = pd.concat([result_df, temp_df], ignore_index=True)
-
+        result_df = self.runs_df["summary"].apply(pd.Series)[self.metrics]
         self.last_runs = pd.concat([self.config, result_df], axis=1)
+
+        first_columns = ["id", "model", "dataset"]
+        self.last_runs = self.__sort_columns(self.last_runs, first_columns)
 
         return self.last_runs
 
-    def get_best_epoch(self):
+    def get_best_epochs(self):
         """
-        Constructs and returns the best runs for each configuration at lowest val_loss.
+        Constructs and returns the best runs for each configuration at the lowest val_loss.
         """
+        results = [self.__get_best_epoch_with_runid(run_id) for run_id in self.runs_df["id"]]
 
-        best_epochs = pd.DataFrame(columns=self.metrics + ["epoch"])
-
-        results = [self._get_best_epoch(run) for run in self.runs_df["id"]]
-        for result in results:
-            best_epochs = pd.concat([best_epochs, result], ignore_index=True)
-
+        best_epochs = pd.concat(results, ignore_index=True)
         self.best_epochs = pd.merge(self.config, best_epochs, on="id", how="outer")
+
+        first_columns = ["id", "model", "dataset", "epoch"]
+        self.best_epochs = self.__sort_columns(self.best_epochs, first_columns)
 
         return self.best_epochs
 
-    def _get_best_epoch(self, run):
-
+    def __get_best_epoch_with_runid(self, run):
         run_hist = self.api.run(f"{self.project_name}/{run}").history()
-        run_hist = run_hist[self.metrics + ["epoch"]]
+        run_hist = run_hist[["epoch"] + self.metrics]
         run_hist["id"] = run
 
-        return (
-            run_hist.groupby("epoch")
-            .first()
-            .sort_values("val_loss")
-            .head(1)
-            .reset_index()
-        )
+        run_hist = run_hist.groupby("epoch").first()
+        run_hist = run_hist.sort_values("val_loss")
+
+        return run_hist.head(1).reset_index()
+
+    def __sort_columns(self, df, first_columns):
+        return df[first_columns + [col for col in df if col not in first_columns]]
