@@ -30,7 +30,6 @@ class WeightsandBiasEval:
 
         self.last_runs = None
         self.best_epochs = None
-
         self.fetch_runs()
         self.get_config()
 
@@ -85,10 +84,14 @@ class WeightsandBiasEval:
         return self.best_epochs
 
     def get_best_models(self):
-        if not self.best_epochs:
+        if self.best_epochs is None:
             self.get_best_epochs()
 
-        return self.best_epochs.groupby(["dataset", "model"]).apply(lambda x: x.sort_values("val_loss").head(1))
+        return (
+            self.best_epochs.groupby(["dataset", "model"])
+            .apply(lambda x: x.sort_values("val_loss").head(1))
+            .reset_index(drop=True)
+        )
 
     def __get_best_epoch_with_runid(self, run):
         run_hist = self.api.run(f"{self.project_name}/{run}").history()
