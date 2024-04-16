@@ -2,16 +2,28 @@ import torch
 import torchmetrics
 from matplotlib.pyplot import plt
 
-metrics = torchmetrics.MetricCollection(
-    [
-        torchmetrics.Accuracy(task="binary", average="macro"),
-        torchmetrics.Precision(task="binary", average="macro"),
-        torchmetrics.Recall(task="binary", average="macro"),
-        torchmetrics.F1Score(task="binary", average="macro"),
-        torchmetrics.Specificity(task="binary", average="macro"),
-        torchmetrics.AUROC(task="binary"),
-    ]
-)
+
+def get_metrics(threshold=0.5):
+    return torchmetrics.MetricCollection(
+        [
+            torchmetrics.Accuracy(task="binary", average="macro", threshold=threshold),
+            torchmetrics.Precision(task="binary", average="macro", threshold=threshold),
+            torchmetrics.Recall(task="binary", average="macro", threshold=threshold),
+            torchmetrics.F1Score(task="binary", average="macro", threshold=threshold),
+            torchmetrics.Specificity(
+                task="binary", average="macro", threshold=threshold
+            ),
+            torchmetrics.AUROC(task="binary"),
+        ]
+    )
+
+
+metrics = get_metrics()
+
+
+def metrics_threshold(y_logit, y_true, threshold):
+    metrics = get_metrics(threshold)
+    return metrics(y_logit, y_true)
 
 
 class Metrics:
@@ -26,24 +38,25 @@ class Metrics:
         self.y_logits = y_logits
         self.thresholds = torch.linspace(0, 1, 100)
 
-        # self.compute_metrices_at_different_thresholds()
+        self.metrics_at_different_thresholds()
 
-        def compute_metrices_at_different_thresholds(self):
-            """
-            compute metrics at different thresholds and store them in self.threshold_metrics
-            """
-            for threshold in self.thresholds:
-                y_preds = (self.y_pred > threshold).float()
-                self.threshold_metrics = self.metrics(y_preds, self.y_trues)
+    def metrics_at_different_thresholds(self):
+        """
+        compute metrics at different thresholds and store them in self.threshold_metrics
+        """
+        for threshold in self.thresholds:
+            self.threshold_metrics = metrics_threshold(
+                self.y_logits, self.y_trues, threshold
+            )
 
-        def visualize_threshold_metric_plot(self, metric):
-            """
-            function to visualize the metric at different thresholds using matplotlib
+    def visualize_threshold_metric_plot(self, metric):
+        """
+        function to visualize the metric at different thresholds using matplotlib
 
-            Args:
-            metric: str, metric to visualize, check self.metrics for available metrics
-            """
-            plt.plot(self.thresholds, self.threshold_metrics[metric].compute().numpy())
-            plt.xlabel("Threshold")
-            plt.ylabel(metric)
-            plt.show()
+        Args:
+        metric: str, metric to visualize, check self.metrics for available metrics
+        """
+        plt.plot(self.thresholds, self.threshold_metrics[metric].compute().numpy())
+        plt.xlabel("Threshold")
+        plt.ylabel(metric)
+        plt.show()
