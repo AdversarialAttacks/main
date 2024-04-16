@@ -84,6 +84,12 @@ class WeightsandBiasEval:
 
         return self.best_epochs
 
+    def get_best_models(self):
+        if not self.best_epochs:
+            self.get_best_epochs()
+
+        return self.best_epochs.groupby(["dataset", "model"]).apply(lambda x: x.sort_values("val_loss").head(1))
+
     def __get_best_epoch_with_runid(self, run):
         run_hist = self.api.run(f"{self.project_name}/{run}").history()
         run_hist = run_hist[["epoch"] + self.metrics]
