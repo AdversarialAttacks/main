@@ -40,16 +40,12 @@ class ExplorativeDataAnalysis:
             "test": self.data.test_dataloader(),
         }
         if self.dataloader_state not in dataloaders.keys():
-            raise ValueError(
-                f"Invalid dataloader_type. Choose from {dataloaders.keys()}"
-            )
+            raise ValueError(f"Invalid dataloader_type. Choose from {dataloaders.keys()}")
         return dataloaders[self.dataloader_state]
 
     def _create_adversarial_matrix(self, visualize=False):
         if self.adversarial_matrix is None:
-            adversarial_matrix = torch.rand(
-                (1, 3, self.image_size[0], self.image_size[1])
-            )
+            adversarial_matrix = torch.rand((1, 3, self.image_size[0], self.image_size[1]))
             return adversarial_matrix
         return self.adversarial_matrix
 
@@ -65,7 +61,7 @@ class ExplorativeDataAnalysis:
             plt.figure(figsize=(20, 20))
             for i in range(image.shape[0]):
                 plt.subplot(4, 4, i + 1)
-                plt.imshow(image[i].permute(1, 2, 0).clip(0, 1), cmap="gray")
+                plt.imshow(image[i].permute(1, 2, 0).int().clip(0, 255), cmap="gray")
                 plt.axis("off")
                 plt.title(label[i].item())
                 plt.suptitle("Original Images", fontsize=16, y=1.02)
@@ -81,7 +77,7 @@ class ExplorativeDataAnalysis:
             plt.figure(figsize=(20, 20))
             for i in range(image.shape[0]):
                 plt.subplot(4, 4, i + 1)
-                plt.imshow(image[i].permute(1, 2, 0).clip(0, 1), cmap="gray")
+                plt.imshow(image[i].permute(1, 2, 0).int().clip(0, 255), cmap="gray")
                 plt.axis("off")
                 plt.title(label[i].item())
                 plt.suptitle("Adversarial Noise added to images", fontsize=16, y=1.02)
@@ -106,13 +102,9 @@ class ExplorativeDataAnalysis:
                 plt.title("Histogram of Original Image")
 
                 plt.subplot(num_images, 2, 2 * i + 2)
-                plt.hist(
-                    adversarial_image[0].flatten(), bins=100, color="blue", alpha=0.7
-                )
+                plt.hist(adversarial_image[0].flatten(), bins=100, color="blue", alpha=0.7)
                 plt.title("Histogram of Adversarial Image")
-                plt.suptitle(
-                    "Original Images vs Adversarial Images", fontsize=16, y=1.01
-                )
+                plt.suptitle("Original Images vs Adversarial Images", fontsize=16, y=1.01)
                 plt.tight_layout()
                 continue
             else:
@@ -122,14 +114,10 @@ class ExplorativeDataAnalysis:
                 plt.title(f"Original Image - label {label.item()}")
 
                 plt.subplot(num_images, 2, 2 * i + 2)
-                plt.imshow(
-                    adversarial_image[0].permute(1, 2, 0).clip(0, 1), cmap="gray"
-                )
+                plt.imshow(adversarial_image[0].permute(1, 2, 0).clip(0, 1), cmap="gray")
                 plt.axis("off")
                 plt.title(f"Adversarial Image - label {label.item()}")
-                plt.suptitle(
-                    "Original Images vs Adversarial Images", fontsize=16, y=1.01
-                )
+                plt.suptitle("Original Images vs Adversarial Images", fontsize=16, y=1.01)
                 plt.tight_layout()
                 continue
 
@@ -144,7 +132,7 @@ class ExplorativeDataAnalysis:
         adversarial_matrix = self._create_adversarial_matrix()
         adversarial_image = torch.add(image, adversarial_matrix)
 
-        axs[0, 0].imshow(image.permute(1, 2, 0).clip(0, 1), cmap="gray")
+        axs[0, 0].imshow(image.permute(1, 2, 0).int().clip(0, 255), cmap="gray")
         axs[0, 0].axis("off")
         axs[0, 0].set_title(f"Original Image - label {label.item()}")
 
@@ -155,9 +143,7 @@ class ExplorativeDataAnalysis:
         axs[1, 0].hist(image[0].flatten(), bins=100, color="blue", alpha=0.7)
         axs[1, 0].set_title("Histogram of Original Image")
 
-        axs[1, 1].hist(
-            adversarial_image[0].flatten(), bins=100, color="blue", alpha=0.7
-        )
+        axs[1, 1].hist(adversarial_image[0].flatten(), bins=100, color="blue", alpha=0.7)
         axs[1, 1].set_title("Histogram of Adversarial Image")
 
         plt.suptitle("Original Images vs Adversarial Images", fontsize=16, y=1.01)
@@ -173,9 +159,7 @@ class AnalysePerturbation:
 
     def _generate_adversarial_matrix(self, batch_size=16, image_size=(224, 224)):
         if self.adversarial_matrix is None:
-            adversarial_matrix = torch.rand(
-                (batch_size, 3, image_size[0], image_size[1])
-            )
+            adversarial_matrix = torch.rand((batch_size, 3, image_size[0], image_size[1]))
             return adversarial_matrix
         return self.adversarial_matrix
 
