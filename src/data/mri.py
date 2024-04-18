@@ -106,6 +106,7 @@ class MRIDataModule(L.LightningDataModule):
         self.transform = transform
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.persistent_workers = num_workers > 0
         self.train_val_ratio = train_val_ratio
         self.train_shuffle = train_shuffle
         self.seed = seed
@@ -145,7 +146,7 @@ class MRIDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=self.train_shuffle,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def val_dataloader(self):
@@ -154,7 +155,7 @@ class MRIDataModule(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def test_dataloader(self):
@@ -163,7 +164,7 @@ class MRIDataModule(L.LightningDataModule):
             self.test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def _copy_files(self):

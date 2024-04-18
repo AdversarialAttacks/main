@@ -102,6 +102,7 @@ class COVIDXDataModule(L.LightningDataModule):
         self.transform = transform
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.persistent_workers = num_workers > 0
         self.train_shuffle = train_shuffle
         self.train_sample_size = train_sample_size
         self.seed = seed
@@ -145,7 +146,7 @@ class COVIDXDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=self.train_shuffle,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def val_dataloader(self):
@@ -154,7 +155,7 @@ class COVIDXDataModule(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
 
     def test_dataloader(self):
@@ -163,5 +164,5 @@ class COVIDXDataModule(L.LightningDataModule):
             self.test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
+            persistent_workers=self.persistent_workers,
         )
