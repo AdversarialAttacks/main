@@ -1,7 +1,8 @@
 import torch
 import torchmetrics
+import seaborn as sns
 import matplotlib.pyplot as plt
-from collections import defaultdict 
+from collections import defaultdict
 
 
 def get_metrics(threshold=0.5):
@@ -17,6 +18,7 @@ def get_metrics(threshold=0.5):
             torchmetrics.AUROC(task="binary"),
         ]
     )
+
 
 metrics = get_metrics()
 
@@ -44,15 +46,18 @@ class Metrics:
         compute metrics at different thresholds and store them in self.threshold_metrics
         """
         self.threshold_metrics = defaultdict(list)
-        
+
         for threshold in self.thresholds:
             metrics = metrics_threshold(self.y_preds, self.y_trues, threshold.item())
             for metric, value in metrics.items():
                 self.threshold_metrics[metric].append(value)
-        
-        self.threshold_metrics = {metric: torch.stack(values) for metric, values in self.threshold_metrics.items()}
 
-    def visualize_threshold_metric_plot(self, metric):
+        self.threshold_metrics = {
+            metric: torch.stack(values)
+            for metric, values in self.threshold_metrics.items()
+        }
+
+    def visualize_threshold_metric_plot(self, metric, model, dataset):
         """
         function to visualize the metric at different thresholds using matplotlib
 
@@ -60,6 +65,24 @@ class Metrics:
         metric: str, metric to visualize, check self.metrics for available metrics
         """
         plt.plot(self.thresholds.numpy(), self.threshold_metrics[metric].numpy())
+        plt.title(f"{metric} at different thresholds for {model} on {dataset}")
         plt.xlabel("Threshold")
         plt.ylabel(metric)
+        plt.show()
+
+    def visualize_confusion_matrix(self, model, dataset):
+        """
+        function to visualize the confusion matrix using matplotlib
+        """
+        confusion_matrix = (
+            torchmetrics.ConfusionMatrix(task="binary")
+            (self.y_preds.cpu(), self.y_trues.cpu())
+            .numpy()
+        )
+        sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="Blues")
+        plt.title(f"Confusion Matrix for {model} on {dataset}")
+        plt.xlabel("Predicted Labels")
+        plt.xticks([0.5, 1.5], ["False", "True"])
+        plt.ylabel("True Labels")
+        plt.yticks([0.5, 1.5], ["False", "True"])
         plt.show()
