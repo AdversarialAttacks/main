@@ -64,21 +64,31 @@ class Metrics:
         Args:
         metric: str, metric to visualize, check self.metrics for available metrics
         """
+        plt.figure(figsize=(10, 5), dpi=200)
         plt.plot(self.thresholds.numpy(), self.threshold_metrics[metric].numpy())
         plt.title(f"{metric} at different thresholds for {model} on {dataset}")
+        best_threshold = self.thresholds[self.threshold_metrics[metric].argmax()].item()
+        plt.axvline(
+            best_threshold, color="green", linestyle="--", label="Best Threshold"
+        )
+        default_threshold = 0.5
+        plt.axvline(
+            default_threshold, color="red", linestyle="--", label="Default Threshold"
+        )
         plt.xlabel("Threshold")
         plt.ylabel(metric)
+        plt.legend()
+        plt.xticks(ticks=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+        plt.grid(axis="x", alpha=0.5)
         plt.show()
 
     def visualize_confusion_matrix(self, model, dataset):
         """
         function to visualize the confusion matrix using matplotlib
         """
-        confusion_matrix = (
-            torchmetrics.ConfusionMatrix(task="binary")
-            (self.y_preds.cpu(), self.y_trues.cpu())
-            .numpy()
-        )
+        confusion_matrix = torchmetrics.ConfusionMatrix(task="binary")(
+            self.y_preds.cpu(), self.y_trues.cpu()
+        ).numpy()
         sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="Blues")
         plt.title(f"Confusion Matrix for {model} on {dataset}")
         plt.xlabel("Predicted Labels")
