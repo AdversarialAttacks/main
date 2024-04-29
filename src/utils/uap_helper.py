@@ -188,6 +188,7 @@ def generate_adversarial_image(
 def generate_adversarial_images_from_model_dataset(
     modelname,
     dataset,
+    transform=default_transform,
     num_universal_pertubation_images=50,
     num_pertubation_images=50,
     desired_fooling_rate=0.8,
@@ -197,6 +198,7 @@ def generate_adversarial_images_from_model_dataset(
     seed=None,
     eps=1e-6,
     verbose=False,
+    num_workers=0,
     device="cpu",
 ):
     if seed is None:
@@ -209,7 +211,7 @@ def generate_adversarial_images_from_model_dataset(
 
     perturbations = []
     for i in trange(num_universal_pertubation_images, desc="Universal Pertubation", position=0):
-        dataloader = get_datamodule(dataset, seed=seed + i)
+        dataloader = get_datamodule(dataset, transform=transform, seed=seed + i, num_workers=num_workers)
         v = generate_adversarial_image(
             model,
             dataloader.train_dataloader(),
