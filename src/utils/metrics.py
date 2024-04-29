@@ -12,9 +12,7 @@ def get_metrics(threshold=0.5):
             torchmetrics.Precision(task="binary", average="macro", threshold=threshold),
             torchmetrics.Recall(task="binary", average="macro", threshold=threshold),
             torchmetrics.F1Score(task="binary", average="macro", threshold=threshold),
-            torchmetrics.Specificity(
-                task="binary", average="macro", threshold=threshold
-            ),
+            torchmetrics.Specificity(task="binary", average="macro", threshold=threshold),
             torchmetrics.AUROC(task="binary"),
         ]
     )
@@ -52,10 +50,7 @@ class Metrics:
             for metric, value in metrics.items():
                 self.threshold_metrics[metric].append(value)
 
-        self.threshold_metrics = {
-            metric: torch.stack(values)
-            for metric, values in self.threshold_metrics.items()
-        }
+        self.threshold_metrics = {metric: torch.stack(values) for metric, values in self.threshold_metrics.items()}
 
     def visualize_threshold_metric_plot(self, metric, model, dataset):
         """
@@ -68,13 +63,9 @@ class Metrics:
         plt.plot(self.thresholds.numpy(), self.threshold_metrics[metric].numpy())
         plt.title(f"{metric} at different thresholds for {model} on {dataset}")
         best_threshold = self.thresholds[self.threshold_metrics[metric].argmax()].item()
-        plt.axvline(
-            best_threshold, color="green", linestyle="--", label="Best Threshold"
-        )
+        plt.axvline(best_threshold, color="green", linestyle="--", label="Best Threshold")
         default_threshold = 0.5
-        plt.axvline(
-            default_threshold, color="red", linestyle="--", label="Default Threshold"
-        )
+        plt.axvline(default_threshold, color="red", linestyle="--", label="Default Threshold")
         plt.xlabel("Threshold")
         plt.ylabel(metric)
         plt.legend()
@@ -86,9 +77,7 @@ class Metrics:
         """
         function to visualize the confusion matrix using matplotlib
         """
-        confusion_matrix = torchmetrics.ConfusionMatrix(task="binary")(
-            self.y_preds.cpu(), self.y_trues.cpu()
-        ).numpy()
+        confusion_matrix = torchmetrics.ConfusionMatrix(task="binary")(self.y_preds.cpu(), self.y_trues.cpu()).numpy()
         sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="Blues")
         plt.title(f"Confusion Matrix for {model} on {dataset}")
         plt.xlabel("Predicted Labels")
