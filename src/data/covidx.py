@@ -166,3 +166,42 @@ class COVIDXDataModule(L.LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
         )
+
+    def get_partition_info(self):
+        """
+        Returns a DataFrame containing information about the dataset partitions.
+        """
+
+        total = len(self.train_dataset) + len(self.val_dataset) + len(self.test_dataset)
+
+        len_train = len(self.train_dataset)
+        len_val = len(self.val_dataset)
+        len_test = len(self.test_dataset)
+
+        train_labels = self.train_dataset.data["class"].value_counts()
+        val_labels = self.val_dataset.data["class"].value_counts()
+        test_labels = self.test_dataset.data["class"].value_counts()
+
+        return pd.DataFrame(
+            {
+                "Dataset": ["COVIDX-CXR4", "COVIDX-CXR4", "COVIDX-CXR4"],
+                "Partitiontype": ["Train", "Validation", "Test"],
+                "n image absolute": [len_train, len_val, len_test],
+                "n image relative": [len_train / total, len_val / total, len_test / total],
+                "n Positive class": [
+                    train_labels["positive"],
+                    val_labels["positive"],
+                    test_labels["positive"],
+                ],
+                "n Negative class": [
+                    train_labels["negative"],
+                    val_labels["negative"],
+                    test_labels["negative"],
+                ],
+                "Postive Ratio": [
+                    train_labels["positive"] / len_train,
+                    val_labels["positive"] / len_val,
+                    test_labels["positive"] / len_test,
+                ],
+            }
+        )

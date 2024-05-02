@@ -236,3 +236,70 @@ class MRIDataModule(L.LightningDataModule):
             )
 
             df.to_csv(f"{path}.txt", sep=" ", index=False, header=False)
+
+    def get_partition_info(self):
+        """
+        Returns a DataFrame containing information about the dataset partitions.
+        """
+
+        total = len(self.train_dataset) + len(self.val_dataset) + len(self.test_dataset)
+
+        len_train = len(self.train_dataset)
+        len_val = len(self.val_dataset)
+        len_test = len(self.test_dataset)
+
+        train_labels = self.train_dataset.data["class"].value_counts()
+        val_labels = self.val_dataset.data["class"].value_counts()
+        test_labels = self.test_dataset.data["class"].value_counts()
+
+        n_positive_train = train_labels.get("pituitary", 0) + train_labels.get("glioma", 0) + train_labels.get("meningioma", 0)
+        n_positive_val = val_labels.get("pituitary", 0) + val_labels.get("glioma", 0) + val_labels.get("meningioma", 0)
+        n_positive_test = test_labels.get("pituitary", 0) + test_labels.get("glioma", 0) + test_labels.get("meningioma", 0)
+
+        return pd.DataFrame(
+            {
+                "Dataset": ["MRI-Brain-Tumor", "MRI-Brain-Tumor", "MRI-Brain-Tumor"],
+                "Partitiontype": ["Train", "Validation", "Test"],
+                "n image absolute": [len_train, len_val, len_test],
+                "n image relative": [
+                    len_train / total,
+                    len_val / total,
+                    len_test / total,
+                ],
+                "n Positive class": [
+                    n_positive_train,
+                    n_positive_val,
+                    n_positive_test,
+                ],
+                "n Negative class": [
+                    train_labels.get("no", 0),
+                    val_labels.get("no", 0),
+                    test_labels.get("no", 0),
+                ],
+                "Positive Ratio": [
+                    n_positive_train / len_train,
+                    n_positive_val / len_val,
+                    n_positive_test / len_test,
+                ],
+                "n pituitary": [
+                    train_labels.get("pituitary", 0),
+                    val_labels.get("pituitary", 0),
+                    test_labels.get("pituitary", 0),
+                ],
+                "n glioma": [
+                    train_labels.get("glioma", 0),
+                    val_labels.get("glioma", 0),
+                    test_labels.get("glioma", 0),
+                ],
+                "n meningioma": [
+                    train_labels.get("meningioma", 0),
+                    val_labels.get("meningioma", 0),
+                    test_labels.get("meningioma", 0),
+                ],
+                "n no_tumor": [
+                    train_labels.get("no", 0),
+                    val_labels.get("no", 0),
+                    test_labels.get("no", 0),
+                ],
+            }
+        )
