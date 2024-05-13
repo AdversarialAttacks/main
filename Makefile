@@ -17,7 +17,7 @@ help:
 
 ## Install Python Dependencies
 reqs:
-	pip3 install -r requirements.txt --force-reinstall
+	pip3 install -r requirements.txt
 
 ## Install Python Dependencies for Windows
 reqs-cuda-windows:
