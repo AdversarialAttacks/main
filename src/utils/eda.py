@@ -9,6 +9,7 @@ class ExplorativeDataAnalysis:
         datamodule,
         image_size,
         batchsize,
+        seed=42,
         adversarial_matrix=None,
         dataloader_type="train",
     ):
@@ -18,6 +19,8 @@ class ExplorativeDataAnalysis:
 
         self.image_size = image_size
         self.batchsize = batchsize
+        self.seed = seed
+
         self.transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize(image_size, antialias=True),
@@ -28,6 +31,7 @@ class ExplorativeDataAnalysis:
             transform=self.transform,
             batch_size=self.batchsize,
             train_shuffle=False,
+            seed=self.seed,
         ).setup()
 
         self.adversarial_matrix = adversarial_matrix
@@ -43,7 +47,7 @@ class ExplorativeDataAnalysis:
                 f"Invalid dataloader_type. Choose from {dataloaders.keys()}"
             )
         return dataloaders[self.dataloader_state]
-    
+
     def _create_adversarial_matrix(self, visualize=False):
         if self.adversarial_matrix is None:
             adversarial_matrix = torch.rand(
@@ -52,128 +56,52 @@ class ExplorativeDataAnalysis:
             return adversarial_matrix
         return self.adversarial_matrix
 
-    def visualize_pertubation(self):
-        adversarial_matrix = self._create_adversarial_matrix()
-        plt.imshow(adversarial_matrix.squeeze().permute(1, 2, 0).clip(0, 1))
-        plt.show()
-
-    def show_batch(self, suptitle, hist_mode=False):
+    def show_batches(self, suptitle, batch_idx, hist_mode=False):
+        """
+        Show batches of images from the dataloader
+        Args:
+            suptitle: Title of the plot
+            batch_idx: List of batch indices to show, if list is empty, prints all batches and their labels
+            hist_mode: If True, show histogram of the images
+        """
         dataloader = self._get_dataloader()
-        for batch in dataloader:
+        filtered_batches = []
+        for idx, batch in enumerate(dataloader):
+            if len(batch_idx) == 0:
+                images, labels = batch
+                print(f"Batch {idx} - Label: {labels}")
+
+            if idx in batch_idx:
+                image, label = batch
+                filtered_batches.append(batch)
+                if len(filtered_batches) == len(batch_idx):
+                    break
+
+        for batch in filtered_batches:
             image, label = batch
-            plt.figure(figsize=(20, 20))
+            plt.figure(figsize=(20, 20), dpi=200)
             for i in range(image.shape[0]):
                 plt.subplot(4, 4, i + 1)
                 plt.imshow(image[i].permute(1, 2, 0).int().clip(0, 255), cmap="gray")
                 plt.axis("off")
                 plt.title(f"Klasse: {label[i].item()}")
-                plt.suptitle(suptitle, fontsize=16, y=1)
+                plt.suptitle(suptitle, fontsize=24, y=1)
                 plt.tight_layout()
             plt.show()
-            break
-
-        if hist_mode: 
-            plt.figure(figsize=(20, 20))
-            for i in range(image.shape[0]):
-                plt.subplot(4, 4, i + 1)
-                plt.hist(image[i].flatten(), bins=100, alpha=0.7, color="blue")
-                plt.title(f"Klasse: {label[i].item()}")
+        
+        if hist_mode:
+            for batch in filtered_batches:
+                image, label = batch
+                plt.figure(figsize=(20, 20), dpi=200)
+                for i in range(image.shape[0]):
+                    plt.subplot(4, 4, i + 1)
+                    plt.hist(image[i].flatten(), bins=100, alpha=0.7, color="blue")
+                    plt.title(f"Klasse: {label[i].item()}")
+                    plt.xlim([0, 255])
+                    plt.tight_layout()
+                plt.suptitle(f"{suptitle}-Histogramm", fontsize=24, y=1)
                 plt.tight_layout()
-            plt.suptitle(suptitle, fontsize=16, y=1)
-            plt.tight_layout()
-            plt.show()
-
-    def show_batch_with_adversarial(self):
-        dataloader = self._get_dataloader()
-        adversarial_matrix = self._create_adversarial_matrix()
-        for batch in dataloader:
-            image, label = batch
-            image = torch.add(image, adversarial_matrix)
-            plt.figure(figsize=(20, 20))
-            for i in range(image.shape[0]):
-                plt.subplot(4, 4, i + 1)
-                plt.imshow(image[i].permute(1, 2, 0).int().clip(0, 255), cmap="gray")
-                plt.axis("off")
-                plt.title(f"Klasse: {label[i].item()}")
-                plt.tight_layout()
-            break
-
-    def compare_images(self, num_images=1, hist_mode=False):
-        dataloader = self._get_dataloader()
-        for batch in dataloader:
-            images, labels = batch
-            break
-
-        plt.figure(figsize=(10, 5 * num_images))
-        for i in range(num_images):
-            image, label = images[i], labels[i]
-            adversarial_matrix = self._create_adversarial_matrix()
-            adversarial_image = torch.add(image, adversarial_matrix)
-
-            if hist_mode:
-                plt.subplot(num_images, 2, 2 * i + 1)
-                plt.hist(image[0].flatten(), bins=100, color="blue", alpha=0.7)
-                plt.title("Histogram of Original Image")
-
-                plt.subplot(num_images, 2, 2 * i + 2)
-                plt.hist(
-                    adversarial_image[0].flatten(), bins=100, color="blue", alpha=0.7
-                )
-                plt.title("Histogram of Adversarial Image")
-                plt.suptitle(
-                    "Original Images vs Adversarial Images", fontsize=16, y=1.01
-                )
-                plt.tight_layout()
-                continue
-            else:
-                plt.subplot(num_images, 2, 2 * i + 1)
-                plt.imshow(image.permute(1, 2, 0).clip(0, 1), cmap="gray")
-                plt.axis("off")
-                plt.title(f"Original Image - label {label.item()}")
-
-                plt.subplot(num_images, 2, 2 * i + 2)
-                plt.imshow(
-                    adversarial_image[0].permute(1, 2, 0).clip(0, 1), cmap="gray"
-                )
-                plt.axis("off")
-                plt.title(f"Adversarial Image - label {label.item()}")
-                plt.suptitle(
-                    "Original Images vs Adversarial Images", fontsize=16, y=1.01
-                )
-                plt.tight_layout()
-                continue
-
-    def compare_histograms(self):
-        dataloader = self._get_dataloader()
-        for batch in dataloader:
-            images, labels = batch
-            break
-        fig, axs = plt.subplots(2, 2, figsize=(15, 15))
-
-        image, label = images[0], labels[0]
-        adversarial_matrix = self._create_adversarial_matrix()
-        adversarial_image = torch.add(image, adversarial_matrix)
-
-        axs[0, 0].imshow(image.permute(1, 2, 0).int().clip(0, 255), cmap="gray")
-        axs[0, 0].axis("off")
-        axs[0, 0].set_title(f"Original Image - label {label.item()}")
-
-        axs[0, 1].imshow(adversarial_image[0].permute(1, 2, 0).clip(0, 1), cmap="gray")
-        axs[0, 1].axis("off")
-        axs[0, 1].set_title(f"Adversarial Image - label {label.item()}")
-
-        axs[1, 0].hist(image[0].flatten(), bins=100, color="blue", alpha=0.7)
-        axs[1, 0].set_title("Histogram of Original Image")
-
-        axs[1, 1].hist(
-            adversarial_image[0].flatten(), bins=100, color="blue", alpha=0.7
-        )
-        axs[1, 1].set_title("Histogram of Adversarial Image")
-
-        plt.suptitle("Original Images vs Adversarial Images", fontsize=16, y=1.01)
-        plt.tight_layout()
-
-        plt.show()
+                plt.show()
 
 
 class AnalysePerturbation:
