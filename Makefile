@@ -1,4 +1,4 @@
- lam.PHONY: help reqs dl-brain-tumor dl-covid lambda-setup
+ lam.PHONY: help reqs reqs-cuda-windows dl-covid dl-brain-tumor lambda-setup
 
 ## Show this help message
 help:
@@ -7,6 +7,8 @@ help:
 	@echo "---"
 	@echo "reqs"
 	@echo "		Install Python Dependencies"
+	@echo "reqs-cuda-windows"
+	@echo "		Install Python Dependencies for Windows"
 	@echo "dl-covid"
 	@echo "		Download COVIDx-CXR4 Dataset"
 	@echo "dl-brain-tumor"
@@ -21,7 +23,7 @@ reqs:
 
 ## Install Python Dependencies for Windows
 reqs-cuda-windows:
-	pip3 install torch==2.2.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+	pip3 install torch==2.3.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 	pip3 install -r requirements.txt
 
 ## Download COVIDx-CXR4 Dataset
