@@ -14,9 +14,7 @@ default_transform = torchvision.transforms.Compose(
 )
 
 
-def get_datamodule(
-    dataset, transform=default_transform, num_workers=0, batch_size=1, seed=42
-):
+def get_datamodule(dataset, transform=default_transform, num_workers=0, batch_size=1, seed=42):
     if dataset == "covidx_data":
         return COVIDXDataModule(
             path="data/raw/COVIDX-CXR4",
@@ -94,9 +92,7 @@ def fool_image(model, image, v, p, lambda_norm, t, eps, verbose, device):
 
         loss = loss_bce_inv_f(y_pred, y_adv) + lambda_norm * norm_f(v + delta_v)
         (
-            print(
-                f"Loss: {loss}, Norm: {lambda_norm * norm_f(delta_v)}, InvBCE: {loss_bce_inv_f(y_pred, y_adv)}"
-            )
+            print(f"Loss: {loss}, Norm: {lambda_norm * norm_f(delta_v)}, InvBCE: {loss_bce_inv_f(y_pred, y_adv)}")
             if verbose
             else None
         )
@@ -157,11 +153,7 @@ def generate_adversarial_image(
         t0 = time.perf_counter()
 
         step += 1
-        (
-            print(f"Starting step {step} for epoch {logger.current_epoch}...")
-            if verbose
-            else None
-        )
+        (print(f"Starting step {step} for epoch {logger.current_epoch}...") if verbose else None)
 
         # iterate over images
         n_image = 0
@@ -219,6 +211,7 @@ def generate_adversarial_image(
 
 
 def generate_adversarial_images_from_model_dataset(
+    model,
     modelname,
     dataset,
     logger: pl_loggers.Logger,
@@ -238,7 +231,6 @@ def generate_adversarial_images_from_model_dataset(
     if seed is None:
         seed = torch.randint(0, int(1e9), (1,)).item()
 
-    model = get_model(modelname, dataset)
     model.freeze()
     model.eval()
     model.to(device)
@@ -268,9 +260,7 @@ def generate_adversarial_images_from_model_dataset(
         t0 = time.perf_counter()
         logger.current_epoch = i_iteration
 
-        dataloader = get_datamodule(
-            dataset, transform=transform, seed=seed + i, num_workers=num_workers
-        )
+        dataloader = get_datamodule(dataset, transform=transform, seed=seed + i_iteration, num_workers=num_workers)
         v_i = generate_adversarial_image(
             model,
             dataloader.train_dataloader(),
