@@ -71,7 +71,7 @@ def fool_image(model, image, v, p, lambda_norm, t, eps, verbose, device):
 
     # initialize temporary adversarial perturbation
     delta_v = torch.zeros((1, 3, 224, 224), device=device, requires_grad=True)
-    optim = torch.optim.Adam([delta_v], lr=0.1)
+    optim = torch.optim.Adam([delta_v], lr=1)
 
     # iterate till the image is fooled or limit
     for _ in range(t):

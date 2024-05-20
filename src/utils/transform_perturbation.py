@@ -30,7 +30,7 @@ class AddImagePerturbation(torch.nn.Module):
             return img
 
         idx = torch.randint(0, self.perturbation.size(0), (1,)) if self.idx is None else self.idx
-        return img + self.perturbation[idx]
+        return img + self.perturbation[idx, :, :, :]
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(perturbation={self.perturbation})"
