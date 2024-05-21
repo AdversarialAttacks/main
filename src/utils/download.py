@@ -17,5 +17,6 @@ def download_models(entity, project):
             print(f"\n---\nPair: {idx} - Model: {metadata.model} - Dataset: {metadata.dataset}")
             model_artifact = wandb.Api().artifact(f"{entity}/{project}/model-{metadata.id}:best", type="model")
             model_path = model_artifact.file(root=f"models/{metadata.model}-{metadata.dataset}/")
+            metadata.to_json(f"models/{metadata.model}-{metadata.dataset}/metadata.json")
 
     return models

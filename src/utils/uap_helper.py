@@ -1,4 +1,5 @@
 import time
+import json
 import torch
 import torchvision
 from tqdm.notebook import trange
@@ -41,15 +42,20 @@ def get_datamodule(dataset, transform=default_transform, num_workers=0, batch_si
         raise ValueError("Invalid dataset")
 
 
-def get_model(modelname, dataset, output_size=1):
-    return ImageClassifier.load_from_checkpoint(
+def get_model(modelname, dataset, output_size=1, return_hparams=False):
+    with open(f"models/{modelname}-{dataset}/metadata.json", "r") as f:
+        hparams = json.load(f)
+
+    model = ImageClassifier.load_from_checkpoint(
         checkpoint_path=f"models/{modelname}-{dataset}/model.ckpt",
         modelname=modelname,
         output_size=output_size,
-        p_dropout_classifier=0.0,
-        lr=0.0,
-        weight_decay=0.0,
+        p_dropout_classifier=hparams["p_dropout_classifier"],
+        lr=hparams["lr"],
+        weight_decay=hparams["weight_decay"],
     )
+
+    return (model, hparams) if return_hparams else model
 
 
 def check_if_image_fooled(model, image, v, v_temp):
@@ -64,14 +70,14 @@ def check_if_image_fooled(model, image, v, v_temp):
         return y_pred.round() != y_adv.round()
 
 
-def fool_image(model, image, v, p, lambda_norm, t, eps, verbose, device):
+def fool_image(model, image, v, p, lambda_norm, t, eps, lr_uap, verbose, device):
     bce_f = torch.nn.BCELoss().to(device)
     norm_f = lambda x: torch.functional.norm(input=x, p=p)
     loss_bce_inv_f = lambda y_pred, y_adv: 1 / (bce_f(y_pred, y_adv) + eps)
 
     # initialize temporary adversarial perturbation
     delta_v = torch.zeros((1, 3, 224, 224), device=device, requires_grad=True)
-    optim = torch.optim.Adam([delta_v], lr=1)
+    optim = torch.optim.Adam([delta_v], lr=lr_uap)
 
     # iterate till the image is fooled or limit
     for _ in range(t):
@@ -140,6 +146,7 @@ def generate_adversarial_image(
     lambda_norm,
     t,
     eps,
+    lr_uap,
     verbose,
     device,
 ):
@@ -178,6 +185,7 @@ def generate_adversarial_image(
                 lambda_norm=lambda_norm,
                 t=t,
                 eps=eps,
+                lr_uap=lr_uap,
                 verbose=verbose,
                 device=device,
             )
@@ -223,6 +231,7 @@ def generate_adversarial_images_from_model_dataset(
     lambda_norm=0.001,
     t=20,
     eps=1e-6,
+    lr_uap=0.1,
     seed=None,
     verbose=False,
     num_workers=0,
@@ -247,6 +256,7 @@ def generate_adversarial_images_from_model_dataset(
             "lambda_norm": lambda_norm,
             "t": t,
             "eps": eps,
+            "lr_uap": lr_uap,
             "seed": seed,
             "verbose": verbose,
             "num_workers": num_workers,
@@ -271,6 +281,7 @@ def generate_adversarial_images_from_model_dataset(
             lambda_norm=lambda_norm,
             t=t,
             eps=eps,
+            lr_uap=lr_uap,
             verbose=verbose,
             device=device,
         )
