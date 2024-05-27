@@ -2,7 +2,9 @@ import torch
 import torchvision
 import torch.optim as optim
 import lightning as L
+import pandas as pd
 
+from lightning.pytorch import loggers as pl_loggers
 from src.utils.metrics import metrics
 
 
@@ -167,6 +169,13 @@ class ImageClassifier(L.LightningModule):
         metrics_dict = self.metrics(predictions, targets.int())
         for metric, value in metrics_dict.items():
             self.log(f"{state}_{metric}", value)
+
+        if state == "test" and isinstance(self.logger, pl_loggers.CSVLogger):
+            predictions = predictions.cpu().detach().numpy()
+            targets = targets.cpu().detach().numpy()
+            pd.DataFrame({"predictions": predictions, "targets": targets}).to_csv(
+                f"{self.logger.log_dir}/test_predictions.csv", index=True
+            )
 
         self.logging[f"{state}_prediction"] = []
         self.logging[f"{state}_target"] = []
