@@ -198,3 +198,6 @@ pyrightconfig.json
 wandb/
 baselines/
 models/
+
+# robustified model files
+robustified_models/*/04_robustify_model/*.ckpt
