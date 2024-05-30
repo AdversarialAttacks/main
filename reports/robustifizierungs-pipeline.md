@@ -13,28 +13,27 @@ graph TD
                 Inferencemit(Inference mit ...)
             end
 
+            ModellRobustifizieren(Modell robustifizieren)
             subgraph robustifizierung[" "]
-                ModellRobustifizieren(Modell robustifizieren)
                 Inferencemit2(Inference mit ...)
                 Testdata2(Test Datensatz)
                 TestdatamitUAP2(Test Datensatz pro UAP)
             end
 
-            Evaluierung(Evaluierung)
-            Modelersetzen(Modell mit robustifizierten Modell ersetzen)
+            Evaluierung(Speicherung der Metriken & 
+            Evaluierung)
+            Modelersetzen(Modell mit robustifizierten 
+            Modell ersetzen)
     end
 
 
-ModellTrained --> Inferencemit
 ModellTrained --> UAP
 UAP --> ModellRobustifizieren
-ModellTrained --> ModellRobustifizieren
 
 Inferencemit -.-> Testdata
 Inferencemit -.-> TestdatamitUAP
 
-UAP --> TestdatamitUAP
-UAP --> TestdatamitUAP2
+UAP --> Inferencemit
 
 ModellRobustifizieren --> Inferencemit2
 
@@ -50,6 +49,8 @@ Testdata2 --> Evaluierung
 Evaluierung --> Modelersetzen
 Modelersetzen -.-> |x mal| ModellTrained
 
-
-
-
+style ModellRobustifizieren fill:#D3D3D3
+style UAP fill:#D3D3D3
+style TestdatamitUAP fill:#D3D3D3
+style TestdatamitUAP2 fill:#D3D3D3
+style Modelersetzen fill:#D3D3D3
