@@ -20,6 +20,19 @@ class UAP_EDA:
         else:
             print(f"File not found at {uap_path}")
             return None
+        
+
+    def return_uap_tensor(self, max_robustification):
+        uaps = []
+        for n_robustification in range(0, max_robustification):
+            uap = self.read_perturbations(n_robustification)
+            if uap is not None:
+                uaps.append(uap)
+            else:
+                print(
+                    f"Skipping tensor for robustification level {n_robustification} due to missing file."
+                )
+        return torch.stack(uaps)
 
     def visualize_perturbations(self, max_robustification):
         for n_robustification in range(0, max_robustification):
@@ -128,4 +141,30 @@ class UAP_EDA:
         plt.title(
             f"Heatmap of UAP {n_uap} for {self.model} on {self.dataset} \n (n={self.n_image}, Robustification Level {robustification_level})"
         )
+        plt.show()
+
+    def perturbation_progress(self, uap_index, max_robustification):
+        # read from each robustification leven the UAP Tensor index 0 and visualize it in one row
+        fig, axs = plt.subplots(1, max_robustification, figsize=(3*max_robustification, 3))
+        for n_robustification in range(0, max_robustification):
+            uaps = self.read_perturbations(n_robustification)
+            if uaps is not None:
+                uap = uaps[uap_index]
+                perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
+                vmax = np.abs(perturbations).max()
+                axs[n_robustification].imshow(
+                    perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax
+                )
+                axs[n_robustification].axis("off")
+                axs[n_robustification].set_title(
+                    f"Robustification Level {n_robustification}"
+                )
+            else:
+                print(
+                    f"Skipping visualization for robustification level {n_robustification} due to missing file."
+                )
+        fig.suptitle(
+            f"Heatmaps of UAP Index {uap_index} for {self.model} on {self.dataset} (n={self.n_image})"
+        )
+        plt.tight_layout()
         plt.show()
