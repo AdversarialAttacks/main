@@ -29,6 +29,32 @@ def get_transform(perturbations: torch.Tensor = None, p: float = None, idx: int 
         ]
     )
 
+def get_datamodule(dataset, transform=get_transform(), num_workers=0, batch_size=1, seed=42):
+    if dataset == "covidx_data":
+        return COVIDXDataModule(
+            path="data/raw/COVIDX-CXR4",
+            transform=transform,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            train_sample_size=0.05,
+            train_shuffle=True,
+            seed=seed,
+        ).setup()
+
+    elif dataset == "mri_data":
+        return MRIDataModule(
+            path="data/raw/Brain-Tumor-MRI",
+            path_processed="data/processed/Brain-Tumor-MRI",
+            transform=transform,
+            num_workers=num_workers,
+            batch_size=batch_size,
+            train_shuffle=True,
+            seed=seed,
+        ).setup()
+
+    else:
+        raise ValueError("Invalid dataset")
+
 def pipeline(
     modelname: str,
     dataset: str,

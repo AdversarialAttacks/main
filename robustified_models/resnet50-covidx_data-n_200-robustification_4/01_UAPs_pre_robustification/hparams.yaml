@@ -1,0 +1,55 @@
+dataset: covidx_data
+device: cuda
+eps: 1.0e-06
+i: 5
+lambda_norm: 0.001
+lr_uap: 0.1
+modelname: resnet50
+n: 200
+num_workers: 16
+p: 2
+r: 0.5
+seed: 42
+t: 30
+transform: !!python/object:torchvision.transforms.transforms.Compose
+  transforms:
+  - !!python/object:torchvision.transforms.transforms.Resize
+    _backward_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _backward_pre_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _buffers: !!python/object/apply:collections.OrderedDict
+    - []
+    _forward_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _forward_hooks_always_called: !!python/object/apply:collections.OrderedDict
+    - []
+    _forward_hooks_with_kwargs: !!python/object/apply:collections.OrderedDict
+    - []
+    _forward_pre_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _forward_pre_hooks_with_kwargs: !!python/object/apply:collections.OrderedDict
+    - []
+    _is_full_backward_hook: null
+    _load_state_dict_post_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _load_state_dict_pre_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _modules: !!python/object/apply:collections.OrderedDict
+    - []
+    _non_persistent_buffers_set: !!set {}
+    _parameters: !!python/object/apply:collections.OrderedDict
+    - []
+    _state_dict_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    _state_dict_pre_hooks: !!python/object/apply:collections.OrderedDict
+    - []
+    antialias: true
+    interpolation: !!python/object/apply:torchvision.transforms.functional.InterpolationMode
+    - bilinear
+    max_size: null
+    size: !!python/tuple
+    - 224
+    - 224
+    training: true
+verbose: false
