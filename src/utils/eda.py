@@ -10,12 +10,12 @@ class ExplorativeDataAnalysis:
         image_size,
         batchsize,
         seed=42,
-        adversarial_matrix=None,
-        dataloader_type="train",
+        dataset="covidx_data",
+        train_sample_size=0.05,
     ):
 
         self.datamodule = datamodule
-        self.dataloader_state = dataloader_type
+        self.train_sample_size = train_sample_size
 
         self.image_size = image_size
         self.batchsize = batchsize
@@ -27,36 +27,44 @@ class ExplorativeDataAnalysis:
             ]
         )
 
-        self.data = datamodule(
-            transform=self.transform,
-            batch_size=self.batchsize,
-            train_shuffle=False,
-            seed=self.seed,
-        ).setup()
+        if dataset == "covidx_data":
+            self.data = self.datamodule(
+                transform=self.transform,
+                batch_size=self.batchsize,
+                train_shuffle=True,
+                seed=self.seed,
+                train_sample_size=self.train_sample_size,
+            ).setup()
 
-        self.adversarial_matrix = adversarial_matrix
+        elif dataset == "mri_data":
+            self.data = self.datamodule(
+                transform=self.transform,
+                batch_size=self.batchsize,
+                train_shuffle=True,
+                seed=self.seed,
+            ).setup()
 
     def _get_dataloader(self):
-        dataloaders = {
+        return {
             "train": self.data.train_dataloader(),
             "val": self.data.val_dataloader(),
             "test": self.data.test_dataloader(),
         }
-        if self.dataloader_state not in dataloaders.keys():
-            raise ValueError(
-                f"Invalid dataloader_type. Choose from {dataloaders.keys()}"
-            )
-        return dataloaders[self.dataloader_state]
 
-    def _create_adversarial_matrix(self, visualize=False):
-        if self.adversarial_matrix is None:
-            adversarial_matrix = torch.rand(
-                (1, 3, self.image_size[0], self.image_size[1])
-            )
-            return adversarial_matrix
-        return self.adversarial_matrix
+    def get_image_tensors(self, batch_idx, dataloader_type="train"):
+        dataloader = self._get_dataloader()[dataloader_type]
+        filtered_batches = []
+        for idx, batch in enumerate(dataloader):
+            if idx in batch_idx:
+                image, label = batch
+                filtered_batches.append(batch)
+                if len(filtered_batches) == len(batch_idx):
+                    break
+        return filtered_batches
 
-    def show_batches(self, suptitle, batch_idx, hist_mode=False):
+    def show_batches(
+        self, suptitle, batch_idx, hist_mode=False, dataloader_type="train"
+    ):
         """
         Show batches of images from the dataloader
         Args:
@@ -64,7 +72,7 @@ class ExplorativeDataAnalysis:
             batch_idx: List of batch indices to show, if list is empty, prints all batches and their labels
             hist_mode: If True, show histogram of the images
         """
-        dataloader = self._get_dataloader()
+        dataloader = self._get_dataloader()[dataloader_type]
         filtered_batches = []
         for idx, batch in enumerate(dataloader):
             if len(batch_idx) == 0:
@@ -88,7 +96,7 @@ class ExplorativeDataAnalysis:
                 plt.suptitle(suptitle, fontsize=24, y=1)
                 plt.tight_layout()
             plt.show()
-        
+
         if hist_mode:
             for batch in filtered_batches:
                 image, label = batch
@@ -102,6 +110,57 @@ class ExplorativeDataAnalysis:
                 plt.suptitle(f"{suptitle}-Histogramm", fontsize=24, y=1)
                 plt.tight_layout()
                 plt.show()
+
+    def channel_distribution(
+        self,
+        dataset="Dataset",
+        binsize=255,
+        dataloader_types=["train", "val", "test"],
+        density=True,
+    ):
+        """
+        Flattens all images in the specified dataloaders and plots the combined
+        distribution of pixel values across all channels in subplots.
+        """
+        fig, axes = plt.subplots(
+            1, len(dataloader_types), figsize=(5 * len(dataloader_types), 5), dpi=200
+        )  # Adjust subplot size dynamically based on the number of dataloaders
+
+        for i, dataloader_type in enumerate(dataloader_types):
+            dataloader = self._get_dataloader()[dataloader_type]
+            all_pixels = []
+
+            # Collecting pixel values
+            for batch in dataloader:
+                images, labels = batch
+                # Flatten all pixels for each image in the batch, then concatenate them into one large tensor
+                flattened_pixels = images.view(
+                    images.shape[0], -1
+                )  # Flatten each image
+                all_pixels.extend(flattened_pixels)
+
+            # Convert list of tensors to one large tensor
+            all_pixels = torch.cat(all_pixels, dim=0)
+
+            # Convert tensor to numpy array and flatten it to 1D
+            axes[i].hist(
+                all_pixels.numpy().flatten(),
+                bins=binsize,
+                alpha=0.7,
+                color="blue",
+                density=density,
+            )
+            axes[i].set_title(f"{dataloader_type.capitalize()} Datensatz", fontsize=16)
+            axes[i].set_xlabel("Pixel Wert")
+            axes[i].set_ylabel("Absolute Häufigkeit")
+
+        fig.suptitle(
+            f"Verteilung der Pixelwerte (Binsize: {binsize}) \n {dataset}",
+            fontsize=24,
+            y=1,
+        )
+        plt.tight_layout()
+        plt.show()
 
 
 class AnalysePerturbation:
