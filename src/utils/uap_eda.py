@@ -2,6 +2,10 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+
+
+from src.utils.uap_helper import get_datamodule
 
 plt.rcParams["figure.dpi"] = 200
 plt.rcParams["figure.figsize"] = (16, 8)
@@ -157,3 +161,116 @@ class UAP_EDA:
 
         plt.tight_layout()
         plt.show()
+
+    def get_image(self, datapartition="train", index=0, seed=42):
+        datamodule = get_datamodule(self.dataset, seed=seed)
+        datamodule.setup()
+
+        if datapartition == "train":
+            dataloader = datamodule.train_dataloader()
+        elif datapartition == "val":
+            dataloader = datamodule.val_dataloader()
+        elif datapartition == "test":
+            dataloader = datamodule.test_dataloader()
+        else:
+            raise ValueError(
+                "Invalid data partition. Choose from 'train', 'val', or 'test'."
+            )
+
+        for i, batch in enumerate(dataloader):
+            if i == index:
+                images, _ = batch
+                return images  # Return the image in the format [batch, channel, height, width]
+
+        raise IndexError("Index out of range in the dataset")
+
+    def visualize_uap_with_data(
+        self,
+        uap_indices=[0],
+        robustification_level=0,
+        image=None,
+    ):
+
+        # Setup data module
+        image = self.get_image(datapartition="train", index=5, seed=42)
+
+        for uap_index in uap_indices:
+            v = self.uaps_tensor[robustification_level][uap_index].cpu()
+
+            # Prepare subplots for the current UAP index
+            fig, axs = plt.subplots(1, 5, figsize=(25, 5))
+
+            # Original Image
+            original_image = image.cpu().squeeze().permute(1, 2, 0).numpy().astype(int)
+            axs[0].imshow(original_image)
+            axs[0].axis("off")
+            axs[0].set_title("Ursprungs Bild")
+
+            # Original Image + UAP
+            perturbed_image = image + v
+            perturbed_image = perturbed_image.clamp(0, 255)
+            perturbed_image = (
+                perturbed_image.cpu().squeeze().permute(1, 2, 0).numpy().astype(int)
+            )
+            axs[1].imshow(perturbed_image)
+            axs[1].axis("off")
+            axs[1].set_title("Perturbiertes Bild")
+
+            # UAP Visualization
+            perturbations = v.mean(dim=0).cpu().squeeze().numpy().astype(int)
+            vmax = np.abs(perturbations).max()
+            im = axs[2].imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
+            axs[2].axis("off")
+            axs[2].set_title("Universal Adversarial Perturbation")
+            cbar = plt.colorbar(
+                im, ax=axs[2], fraction=0.046, pad=0.01, location="bottom"
+            )
+            cbar.set_label("Anpassende Helligkeit", fontsize=12)
+
+            # UAP Violinplot
+            axs[3].violinplot(v.flatten(), showmedians=True, showmeans=True)
+            axs[3].set_title("UAP Violinplot", fontsize=16)
+            axs[3].set_ylabel("Perturbations Wert", fontsize=12)
+
+            # UAP Stats with hist plot
+            axs[4].hist(v.flatten(), bins=100, color="grey", alpha=0.7)
+            axs[4].set_title("UAP Histogramm", fontsize=16)
+            axs[4].set_yticks([])
+            axs[4].axis("on")
+            axs[4].set_xlabel("Perturbations Wert", fontsize=12)
+            axs[4].set_ylabel("Häufigkeit", fontsize=12)
+
+            # Add overall title with statistics for each UAP
+            plt.suptitle(
+                f"- Pixel Perturbation stats: min: {v.min().item():.2f}, max: {v.max().item():.2f}, σ: {v.std().item():.2f}, μ: {v.mean().item():.2f}",
+                fontsize=10,
+                ha="left",
+                y=0.075,
+                x=0.145,
+            )
+
+        plt.tight_layout()
+        plt.show()
+
+    def visualize_uap_3d(self, uap_index=0, robustification_level=0):
+        uap = self.uaps_tensor[robustification_level][uap_index].cpu()
+        perturbations = uap.mean(dim=0).numpy()
+
+        height, width = perturbations.shape
+
+        fig = go.Figure(data=[go.Surface(z=perturbations)])
+
+        fig.update_layout(
+            title=f"3D Surface Plot of UAP {uap_index} for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {robustification_level})",
+            scene=dict(
+                xaxis_title="Width",
+                yaxis_title="Height",
+                zaxis_title="Perturbation Value",
+            ),
+            autosize=True,
+            width=800,
+            height=800,
+            margin=dict(l=65, r=50, b=65, t=90),
+        )
+
+        fig.show()
