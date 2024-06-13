@@ -8,163 +8,152 @@ plt.rcParams["figure.figsize"] = (16, 8)
 
 
 class UAP_EDA:
-    def __init__(self, model, dataset, n_image):
+    def __init__(self, model, dataset, n_image, max_robustification_level=5):
         self.model = model
         self.dataset = dataset
         self.n_image = n_image
+        self.max_robustification_level = max_robustification_level
+        self.uaps_tensor = self.return_stacked_uap_tensor(max_robustification=5)
 
-    def read_perturbations(self, n_robustification):
+    def _read_perturbations(self, n_robustification):
         uap_path = f"robustified_models/{self.model}-{self.dataset}-n_{self.n_image}-robustification_{n_robustification}/01_UAPs_pre_robustification/UAPs_tensor.pt"
         if os.path.isfile(uap_path):
+            # Tensor shape: torch.Size([5, 3, 224, 224]) -> 5 UAPs, 3 channels, 224x224 pixels
             return torch.load(uap_path, map_location=torch.device("cpu")).detach()
+
         else:
             print(f"File not found at {uap_path}")
-            return None
-        
 
-    def return_uap_tensor(self, max_robustification):
+    def _read_all_perturbations(self, max_robustification):
         uaps = []
         for n_robustification in range(0, max_robustification):
-            uap = self.read_perturbations(n_robustification)
+            uap = self._read_perturbations(n_robustification)
             if uap is not None:
                 uaps.append(uap)
             else:
                 print(
                     f"Skipping tensor for robustification level {n_robustification} due to missing file."
                 )
-        return torch.stack(uaps)
+        return uaps
 
-    def visualize_perturbations(self, max_robustification):
-        for n_robustification in range(0, max_robustification):
-            uaps = self.read_perturbations(n_robustification)
-            if uaps is not None:
-                fig, ax = plt.subplots(1, 5, figsize=(15, 3))
-                for i in range(5):
-                    uap = uaps[i]
-                    perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
-                    vmax = np.abs(perturbations).max()
-                    im = ax[i].imshow(
-                        perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax
-                    )
-                    ax[i].axis("off")
-                    ax[i].set_title(f"UAP {i+1}")
+    def return_stacked_uap_tensor(self, max_robustification):
+        uaps = self._read_all_perturbations(max_robustification)
+        self.uaps_tensor = torch.stack(uaps)
+        # Tensor shape: torch.Size([5, 5, 3, 224, 224]) -> 5 Robustification Levels, 5 UAPs, 3 channels, 224x224 pixels
+        return self.uaps_tensor
 
-                fig.suptitle(
-                    f"Heatmaps of UAPs for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {n_robustification})"
-                )
-                plt.show()
-            else:
-                print(
-                    f"Skipping visualization for robustification level {n_robustification} due to missing file."
-                )
+    def _visualize_uaps_tensor(self):
+        for i in range(self.uaps_tensor.shape[0]):
+            uap = self.uaps_tensor[i]
+            fig, ax = plt.subplots(
+                1, self.uaps_tensor.shape[0], figsize=(3 * self.uaps_tensor.shape[0], 3)
+            )
+            for j in range(self.uaps_tensor.shape[1]):
+                perturbations = uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int)
+                vmax = np.abs(perturbations).max()
+                ax[j].imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
+                ax[j].axis("off")
+                ax[j].set_title(f"UAP {j+1}")
 
-    def statistical_perturbations(self, max_robustification):
-        for n_robustification in range(0, max_robustification):
-            uaps = self.read_perturbations(n_robustification)
-            if uaps is not None:
-                for i in range(5):
-                    uap = uaps[i]
-                    perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
-                    print(f"UAP {i+1} (Robustification Level {n_robustification})")
-                    print(f"Mean: {perturbations.mean()}")
-                    print(f"Std: {perturbations.std()}")
-                    print(f"Min: {perturbations.min()}")
-                    print(f"Max: {perturbations.max()}")
-                    print()
-            else:
-                print(
-                    f"Skipping statistical analysis for robustification level {n_robustification} due to missing file."
-                )
+            fig.suptitle(
+                f"Heatmaps of UAPs for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {i})"
+            )
+            plt.show()
 
-    def visualize_boxplot(self, max_robustification):
+    def _visualize_uaps_tensor2(self):
+        n_robust_levels = self.uaps_tensor.shape[0]  # Number of robustification levels
+        n_uaps = self.uaps_tensor.shape[1]  # Number of UAPs
+
+        for j in range(n_uaps):  # Iterate through each UAP index
+            # Create a figure for each UAP with subplots for each robustification level
+            fig, axs = plt.subplots(
+                1, n_robust_levels, figsize=(3 * n_robust_levels, 3)
+            )
+
+            for i in range(
+                n_robust_levels
+            ):  # Iterate through each robustification level
+                uap = self.uaps_tensor[i][j]
+                perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
+                vmax = np.abs(perturbations).max()
+
+                # Access subplot for current robustification level
+                ax = axs[i] if n_robust_levels > 1 else axs
+                ax.imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
+                ax.axis("off")
+                ax.set_title(f"Robustification Level {i+1}")
+
+            # Set the title for the current UAP's figure
+            fig.suptitle(
+                f"Heatmap of UAP {j+1} for {self.model} on {self.dataset} (n={self.n_image})"
+            )
+            plt.tight_layout()
+            plt.show()
+
+    def visualize_uaps_tensor(self, progress=False):
+        if progress:
+            self._visualize_uaps_tensor()
+        else:
+            self._visualize_uaps_tensor2()
+
+    def visualize_uap_violinplot(self, robustification_level=None):
         data = []
         labels = []
-
-        for n_robustification in range(0, max_robustification):
-            uaps = self.read_perturbations(n_robustification)
-            if uaps is not None:
-                for i in range(uaps.shape[0]):
+        if robustification_level is None:
+            # Visualize all robustification levels
+            for i in range(self.uaps_tensor.shape[0]):
+                uap = self.uaps_tensor[i]
+                for j in range(self.uaps_tensor.shape[1]):
                     perturbations = (
-                        uaps[i]
-                        .mean(dim=0)
-                        .cpu()
-                        .squeeze()
-                        .numpy()
-                        .astype(int)
-                        .flatten()
+                        uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
                     )
                     data.append(perturbations)
-                    labels.append(f"UAP {i+1} Level {n_robustification}")
+                    labels.append(f"UAP {j+1} - Level {i}")
+        else:
+            # Visualize specific robustification level
+            uap = self.uaps_tensor[robustification_level]
+            for j in range(self.uaps_tensor.shape[1]):
+                perturbations = (
+                    uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
+                )
+                data.append(perturbations)
+                labels.append(f"UAP {j+1} - Level {robustification_level}")
 
         plt.figure(figsize=(12, 6))
-        plt.boxplot(data, labels=labels, notch=True, patch_artist=True)
-        plt.xticks(rotation=45, ha="right")
+        plt.violinplot(data, showmedians=True, showmeans=True)
+        plt.xticks(range(1, len(labels) + 1), labels, rotation=90, ha="right")
         plt.ylabel("Perturbation Value")
-        plt.title(
-            "Boxplot Distribution of UAP Pixel Value Across Different Robustification Levels"
-        )
+        if robustification_level is None:
+            plt.title(
+                f"Violinplot Distribution of UAP Pixel Value Across All Robustification Levels\n"
+                f"Model: {self.model} on {self.dataset} - (n={self.n_image})"
+            )
+        else:
+            plt.title(
+                f"Violinplot Distribution of UAP Pixel Value for Robustification Level {robustification_level}\n"
+                f"Model: {self.model} on {self.dataset} - (n={self.n_image})"
+            )
         plt.grid(True)
         plt.show()
 
-    def plot_histogram(self, max_robustification, bins=100):
-        for n_robustification in range(0, max_robustification):
-            uaps = self.read_perturbations(n_robustification)
-            if uaps is not None:
-                fig, axs = plt.subplots(1, 5, figsize=(15, 3), tight_layout=True)
-                for i in range(5):
-                    uap = uaps[i]
-                    perturbations = (
-                        uap.mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
-                    )
-                    axs[i].hist(perturbations, bins=bins, color="blue", alpha=0.7)
-                    axs[i].set_title(f"UAP {i+1}")
-                    axs[i].set_xlabel("Perturbation Value")
-                    axs[i].set_ylabel("Frequency")
+    def visualize_multiple_uaps(self, uap_indices, robustification_level):
+        uaps = self._read_perturbations(robustification_level)
+        num_uaps = len(uap_indices)
+        fig, axes = plt.subplots(
+            1, num_uaps, figsize=(5 * num_uaps, 5)
+        )  # Adjust figure size based on number of UAPs
 
-                fig.suptitle(
-                    f"Histograms of UAPs for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {n_robustification})"
-                )
-                plt.show()
-            else:
-                print(
-                    f"Skipping histogram for robustification level {n_robustification} due to missing file."
-                )
+        for i, idx in enumerate(uap_indices):
+            uap = uaps[idx]
+            perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
+            vmax = np.abs(perturbations).max()
 
-    def visualize_uap_example(self, n_uap, robustification_level=0):
-        self.uaps_examples = self.read_perturbations(robustification_level)
-        i_uap = self.uaps_examples[n_uap]
-        i_perturbations = i_uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
-        vmax = np.abs(i_perturbations).max()
-        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-        plt.imshow(i_perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
-        plt.axis("off")
-        plt.title(
-            f"Heatmap of UAP {n_uap} for {self.model} on {self.dataset} \n (n={self.n_image}, Robustification Level {robustification_level})"
-        )
-        plt.show()
+            ax = axes[i] if num_uaps > 1 else axes
+            ax.imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
+            ax.axis("off")
+            ax.set_title(
+                f"Heatmap of UAP {idx} for {self.model} on {self.dataset} \n (n={self.n_image}, Robustification Level {robustification_level})"
+            )
 
-    def perturbation_progress(self, uap_index, max_robustification):
-        # read from each robustification leven the UAP Tensor index 0 and visualize it in one row
-        fig, axs = plt.subplots(1, max_robustification, figsize=(3*max_robustification, 3))
-        for n_robustification in range(0, max_robustification):
-            uaps = self.read_perturbations(n_robustification)
-            if uaps is not None:
-                uap = uaps[uap_index]
-                perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
-                vmax = np.abs(perturbations).max()
-                axs[n_robustification].imshow(
-                    perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax
-                )
-                axs[n_robustification].axis("off")
-                axs[n_robustification].set_title(
-                    f"Robustification Level {n_robustification}"
-                )
-            else:
-                print(
-                    f"Skipping visualization for robustification level {n_robustification} due to missing file."
-                )
-        fig.suptitle(
-            f"Heatmaps of UAP Index {uap_index} for {self.model} on {self.dataset} (n={self.n_image})"
-        )
         plt.tight_layout()
         plt.show()
