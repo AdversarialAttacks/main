@@ -15,7 +15,15 @@ default_transform = torchvision.transforms.Compose(
 )
 
 
-def get_datamodule(dataset, transform=default_transform, num_workers=0, batch_size=1, seed=42):
+def get_datamodule(
+    dataset,
+    transform=default_transform,
+    num_workers=0,
+    batch_size=1,
+    train_shuffle=True,
+    train_positive_class_only=True,
+    seed=42,
+):
     if dataset == "covidx_data":
         return COVIDXDataModule(
             path="data/raw/COVIDX-CXR4",
@@ -23,7 +31,8 @@ def get_datamodule(dataset, transform=default_transform, num_workers=0, batch_si
             num_workers=num_workers,
             batch_size=batch_size,
             train_sample_size=0.05,
-            train_shuffle=False,
+            train_shuffle=train_shuffle,
+            train_positive_class_only=train_positive_class_only,
             seed=seed,
         ).setup()
 
@@ -34,7 +43,8 @@ def get_datamodule(dataset, transform=default_transform, num_workers=0, batch_si
             transform=transform,
             num_workers=num_workers,
             batch_size=batch_size,
-            train_shuffle=False,
+            train_shuffle=train_shuffle,
+            train_positive_class_only=train_positive_class_only,
             seed=seed,
         ).setup()
 
@@ -270,7 +280,15 @@ def generate_adversarial_images_from_model_dataset(
         t0 = time.perf_counter()
         logger.current_epoch = i_iteration
 
-        dataloader = get_datamodule(dataset, transform=transform, seed=seed + i_iteration, num_workers=num_workers)
+        dataloader = get_datamodule(
+            dataset,
+            transform=transform,
+            seed=seed + i_iteration,
+            num_workers=num_workers,
+            train_shuffle=True,
+            train_positive_class_only=True,
+        ).setup()
+
         v_i = generate_adversarial_image(
             model,
             dataloader.train_dataloader(),

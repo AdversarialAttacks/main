@@ -15,6 +15,8 @@ class MRIDataset(torch.utils.data.Dataset):
         split (str): The dataset split (e.g., 'train', 'val', 'test').
         transform (callable, optional): Optional transform to be applied on a sample.
         shuffle (bool, optional): Whether to shuffle the dataset.
+        positive_class_only (bool, optional): Whether to use only the positive class.
+        seed (int, optional): Seed for reproducibility.
 
     Methods:
         __len__: Returns the size of the dataset.
@@ -27,20 +29,22 @@ class MRIDataset(torch.utils.data.Dataset):
         split,
         transform=None,
         shuffle=False,
+        positive_class_only=False,
         seed=None,
     ):
         self.path = path
         self.split = split
         self.transform = transform
         self.shuffle = shuffle
+        self.positive_class_only = positive_class_only
         self.seed = seed
 
         self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
         self.data.columns = ["filename", "class", "label"]
         if shuffle:
-            self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(
-                drop=True
-            )
+            self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(drop=True)
+        if self.positive_class_only:
+            self.data = self.data[self.data["label"].str == "1"]
 
     def __len__(self):
         """Returns the number of items in the dataset."""
@@ -58,9 +62,7 @@ class MRIDataset(torch.utils.data.Dataset):
         """
         row = self.data.iloc[idx]
         filename = f"{self.path}/{self.split}/{row['filename']}"
-        image = torchvision.io.read_image(
-            filename, mode=torchvision.io.image.ImageReadMode.GRAY
-        )
+        image = torchvision.io.read_image(filename, mode=torchvision.io.image.ImageReadMode.GRAY)
         image = image.int().float()
         image = image.expand(3, -1, -1)
         label = row["label"].astype("int")
@@ -80,6 +82,7 @@ class MRIDataModule(L.LightningDataModule):
         batch_size (int, optional): The size of each data batch.
         train_val_ratio (float, optional): The ratio of training to validation data.
         train_shuffle (bool, optional): Whether to shuffle the training data.
+        train_positive_class_only (bool, optional): Whether to include only positive class samples in the training data.
         seed (int, optional): Seed for reproducibility.
 
     Methods:
@@ -98,6 +101,7 @@ class MRIDataModule(L.LightningDataModule):
         num_workers=0,
         train_val_ratio=0.8,
         train_shuffle=False,
+        train_positive_class_only=True,
         seed=None,
     ):
         super().__init__()
@@ -109,6 +113,7 @@ class MRIDataModule(L.LightningDataModule):
         self.persistent_workers = num_workers > 0
         self.train_val_ratio = train_val_ratio
         self.train_shuffle = train_shuffle
+        self.train_positive_class_only = train_positive_class_only
         self.seed = seed
         if seed:
             torch.manual_seed(seed)
@@ -129,13 +134,18 @@ class MRIDataModule(L.LightningDataModule):
             self.path_processed,
             "train",
             transform=self.transform,
+            positive_class_only=self.train_positive_class_only,
             shuffle=self.train_shuffle,
         )
         self.val_dataset = MRIDataset(
-            self.path_processed, "val", transform=self.transform
+            self.path_processed,
+            "val",
+            transform=self.transform,
         )
         self.test_dataset = MRIDataset(
-            self.path_processed, "test", transform=self.transform
+            self.path_processed,
+            "test",
+            transform=self.transform,
         )
         return self
 
@@ -252,9 +262,13 @@ class MRIDataModule(L.LightningDataModule):
         val_labels = self.val_dataset.data["class"].value_counts()
         test_labels = self.test_dataset.data["class"].value_counts()
 
-        n_positive_train = train_labels.get("pituitary", 0) + train_labels.get("glioma", 0) + train_labels.get("meningioma", 0)
+        n_positive_train = (
+            train_labels.get("pituitary", 0) + train_labels.get("glioma", 0) + train_labels.get("meningioma", 0)
+        )
         n_positive_val = val_labels.get("pituitary", 0) + val_labels.get("glioma", 0) + val_labels.get("meningioma", 0)
-        n_positive_test = test_labels.get("pituitary", 0) + test_labels.get("glioma", 0) + test_labels.get("meningioma", 0)
+        n_positive_test = (
+            test_labels.get("pituitary", 0) + test_labels.get("glioma", 0) + test_labels.get("meningioma", 0)
+        )
 
         return pd.DataFrame(
             {

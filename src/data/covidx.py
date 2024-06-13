@@ -13,6 +13,9 @@ class COVIDXDataset(torch.utils.data.Dataset):
         split (str): The dataset split (e.g., 'train', 'val', 'test').
         transform (callable, optional): Optional transform to be applied on a sample.
         shuffle (bool, optional): Whether to shuffle the dataset upon initialization.
+        sample_size (float, optional): The fraction of the dataset to use.
+        positive_class_only (bool, optional): Whether to use only the positive class.
+        seed (int, optional): Seed for reproducibility.
 
     Methods:
         __len__: Returns the size of the dataset.
@@ -26,6 +29,7 @@ class COVIDXDataset(torch.utils.data.Dataset):
         transform=None,
         shuffle=False,
         sample_size=1,
+        positive_class_only=False,
         seed=None,
     ):
         self.path = path
@@ -33,14 +37,15 @@ class COVIDXDataset(torch.utils.data.Dataset):
         self.transform = transform
         self.shuffle = shuffle
         self.sample_size = sample_size
+        self.positive_class_only = positive_class_only
         self.seed = seed
 
         self.data = pd.read_csv(f"{self.path}/{self.split}.txt", sep=" ", header=None)
         self.data.columns = ["pid", "filename", "class", "source"]
         if shuffle:
-            self.data = self.data.sample(
-                frac=self.sample_size, random_state=self.seed
-            ).reset_index(drop=True)
+            self.data = self.data.sample(frac=self.sample_size, random_state=self.seed).reset_index(drop=True)
+        if self.positive_class_only:
+            self.data = self.data[self.data["class"] == "positive"]
 
     def __len__(self):
         """Returns the number of items in the dataset."""
@@ -58,9 +63,7 @@ class COVIDXDataset(torch.utils.data.Dataset):
         """
         row = self.data.iloc[idx]
         filename = f"{self.path}/{self.split}/{row['filename']}"
-        image = torchvision.io.read_image(
-            filename, mode=torchvision.io.image.ImageReadMode.GRAY
-        )
+        image = torchvision.io.read_image(filename, mode=torchvision.io.image.ImageReadMode.GRAY)
         image = image.int().float()
         image = image.expand(3, -1, -1)
         label = (row["class"] == "positive") * 1
@@ -78,6 +81,8 @@ class COVIDXDataModule(L.LightningDataModule):
         transform (callable, optional): Transformations to apply on each sample.
         batch_size (int, optional): The size of each data batch.
         train_shuffle (bool, optional): Whether to shuffle the training data.
+        train_sample_size (float, optional): The fraction of training data to use.
+        train_positive_class_only (bool, optional): Whether to use only the positive class in training.
         seed (int, optional): Seed for reproducibility.
 
     Methods:
@@ -95,6 +100,7 @@ class COVIDXDataModule(L.LightningDataModule):
         num_workers=0,
         train_shuffle=False,
         train_sample_size=1,
+        train_positive_class_only=False,
         seed=None,
     ):
         super().__init__()
@@ -105,6 +111,7 @@ class COVIDXDataModule(L.LightningDataModule):
         self.persistent_workers = num_workers > 0
         self.train_shuffle = train_shuffle
         self.train_sample_size = train_sample_size
+        self.train_positive_class_only = train_positive_class_only
         self.seed = seed
         if seed:
             torch.manual_seed(seed)
@@ -122,6 +129,7 @@ class COVIDXDataModule(L.LightningDataModule):
             transform=self.transform,
             shuffle=self.train_shuffle,
             sample_size=self.train_sample_size,
+            positive_class_only=self.train_positive_class_only,
             seed=self.seed,
         )
 
@@ -136,7 +144,6 @@ class COVIDXDataModule(L.LightningDataModule):
             split="test",
             transform=self.transform,
         )
-
         return self
 
     def train_dataloader(self):
