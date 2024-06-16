@@ -162,7 +162,7 @@ class UAP_EDA:
         plt.tight_layout()
         plt.show()
 
-    def get_image(self, datapartition="train", index=0, seed=42):
+    def get_image(self, datapartition="train", index=0, seed=42, plot=False):
         datamodule = get_datamodule(self.dataset, seed=seed)
         datamodule.setup()
 
@@ -180,9 +180,57 @@ class UAP_EDA:
         for i, batch in enumerate(dataloader):
             if i == index:
                 images, _ = batch
+                if plot:
+                    plt.imshow(images[0].permute(1, 2, 0).numpy().astype(int))
+                    plt.axis("off")
+                    plt.title(f"Image {index} from {datapartition} set")
+                    plt.show()
+
                 return images  # Return the image in the format [batch, channel, height, width]
 
         raise IndexError("Index out of range in the dataset")
+
+    def get_perturbation(self, uap_index, robustification_level):
+        return self.uaps_tensor[robustification_level][uap_index].cpu()
+
+    def visualize_image_uap_3D(
+        self,
+        uap_index=0,
+        robustification_level=0,
+        datapartition="train",
+        image_index=0,
+        seed=42,
+    ):
+        image = self.get_image(
+            datapartition=datapartition, index=image_index, seed=seed
+        )[0]
+        uap = self.get_perturbation(uap_index, robustification_level)
+
+        uap = uap.mean(dim=0).numpy()  # Average over the channels
+        image = image.mean(dim=0).numpy()  # Average over the channels
+
+        perturbed_image = image + uap
+        perturbed_image = perturbed_image.clip(0, 255)
+
+        fig = go.Figure(data=[go.Surface(z=perturbed_image)])
+
+        fig.update_layout(
+            title=f"3D Plot of Image with UAP {uap_index} for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {robustification_level})",
+            scene=dict(
+                xaxis_title="Width",
+                yaxis_title="Height",
+                zaxis_title="Pixel Value",
+                zaxis=dict(
+                    range=[-50, 255 * 2]
+                ),  # Assuming you want to clamp between 0 and 255
+            ),
+            autosize=True,
+            width=800,
+            height=800,
+            margin=dict(l=65, r=50, b=65, t=90),
+        )
+
+        fig.show()
 
     def visualize_uap_with_data(
         self,
@@ -256,12 +304,10 @@ class UAP_EDA:
         uap = self.uaps_tensor[robustification_level][uap_index].cpu()
         perturbations = uap.mean(dim=0).numpy()
 
-        height, width = perturbations.shape
-
         fig = go.Figure(data=[go.Surface(z=perturbations)])
 
         fig.update_layout(
-            title=f"3D Surface Plot of UAP {uap_index} for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {robustification_level})",
+            title=f"3D Plot of UAP {uap_index} for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {robustification_level})",
             scene=dict(
                 xaxis_title="Width",
                 yaxis_title="Height",
