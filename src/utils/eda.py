@@ -1,6 +1,9 @@
 import torch
 import torchvision
+import numpy as np
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 class ExplorativeDataAnalysis:
@@ -162,30 +165,76 @@ class ExplorativeDataAnalysis:
         plt.tight_layout()
         plt.show()
 
+    # caculate for each partition train, val, test the mean of the pixel values for the position of the pixel values over all channels and images
+    def mean_pixel_values(self):
+        """
+        Berechnet den Mittelwert der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
+        """
+        dataloader_types = ["train", "val", "test"]
 
-class AnalysePerturbation:
-    def __init__(self):
-        self.adversarial_matrix = None
+        dict_mean_pixel_values_per_dataloader = {}
 
-    def _generate_adversarial_matrix(self, batch_size=16, image_size=(224, 224)):
-        if self.adversarial_matrix is None:
-            adversarial_matrix = torch.rand(
-                (batch_size, 3, image_size[0], image_size[1])
+        for dataloader_type in dataloader_types:
+            dataloader = self._get_dataloader()[dataloader_type]
+
+            pixel_sum = torch.zeros(224, 224)
+            count_images = 0
+
+            for images, _ in dataloader:
+                # images Dimension: [batch_size, 3, 244, 244] -> Werte identisch über alle Channels
+
+                if pixel_sum is None:
+                    # Mittelwert über alle Channels
+                    mean_over_channels = images.mean(dim=1)
+                    # Summiere alle Pixelwerte über alle Bilder im Batch
+                    pixel_sum = mean_over_channels.sum(dim=0)
+                else:
+                    mean_over_channels = images.mean(dim=1)
+                    pixel_sum = mean_over_channels.sum(dim=0)
+
+                # Anzahl der Bilder im Batch addieren
+                count_images += images.size(0)
+
+            # Speichern des Mittelwertes der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
+            dict_mean_pixel_values_per_dataloader[dataloader_type] = (
+                pixel_sum / count_images
             )
-            return adversarial_matrix
-        return self.adversarial_matrix
 
-    def visualize(self):
-        adversarial_matrix = self._generate_adversarial_matrix()
-        plt.figure(figsize=(20, 20))
-        for i in range(adversarial_matrix.shape[0]):
-            plt.subplot(4, 4, i + 1)
-            plt.imshow(adversarial_matrix[i].squeeze().permute(1, 2, 0).clip(0, 1))
-            plt.axis("off")
-        plt.show()
+        return dict_mean_pixel_values_per_dataloader
 
-    def vis_histogram(self):
-        pass
+    def plot_mean_pixel_heatmaps_together(self):
+        """
+        Visualisiert die Mittelwerte der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
+        Nutzt dabei die Methode self.mean_pixel_values(), um die Heatmaps zu erstellen
+        """
 
-    def compare_perturbation(self):
-        pass
+        mean_pixel_values = self.mean_pixel_values()
+        # Subplots erstellen für die unterschiedlichen Datenpartitionen
+        num_plots = len(mean_pixel_values)
+        fig = make_subplots(
+            rows=1, cols=num_plots, subplot_titles=list(mean_pixel_values.keys())
+        )
+
+        # Für die unterschiedlichen Datenpartitionen Heatmaps hinzufügen
+        col_index = 1
+        for dataloader_type, pixel_values in mean_pixel_values.items():
+            pixel_values_np = pixel_values.numpy()  # Tensor in Numpy Array umwandeln
+
+            fig.add_trace(
+                go.Heatmap(
+                    z=pixel_values_np,
+                    colorscale="Greys",
+                ),
+                row=1,
+                col=col_index,
+            )
+            col_index += 1
+
+        # Layout anpassen
+        fig.update_layout(
+            title_text="Differenzenbilder der unterschiedlichen Datenpartitionen",
+            height=400,
+            width=300 * num_plots,
+        )
+
+        fig.show()
