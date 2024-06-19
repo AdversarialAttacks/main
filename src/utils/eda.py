@@ -15,14 +15,16 @@ class ExplorativeDataAnalysis:
         seed=42,
         dataset="covidx_data",
         train_sample_size=0.05,
+        shuffle=True,
     ):
 
         self.datamodule = datamodule
         self.train_sample_size = train_sample_size
-
+        self.dataset = dataset
         self.image_size = image_size
         self.batchsize = batchsize
         self.seed = seed
+        self.shuffle = shuffle
 
         self.transform = torchvision.transforms.Compose(
             [
@@ -34,7 +36,7 @@ class ExplorativeDataAnalysis:
             self.data = self.datamodule(
                 transform=self.transform,
                 batch_size=self.batchsize,
-                train_shuffle=True,
+                train_shuffle=self.shuffle,
                 seed=self.seed,
                 train_sample_size=self.train_sample_size,
             ).setup()
@@ -43,7 +45,7 @@ class ExplorativeDataAnalysis:
             self.data = self.datamodule(
                 transform=self.transform,
                 batch_size=self.batchsize,
-                train_shuffle=True,
+                train_shuffle=self.shuffle,
                 seed=self.seed,
             ).setup()
 
@@ -116,36 +118,39 @@ class ExplorativeDataAnalysis:
 
     def channel_distribution(
         self,
-        dataset="Dataset",
+        dataset,
         binsize=255,
-        dataloader_types=["train", "val", "test"],
         density=True,
     ):
         """
-        Flattens all images in the specified dataloaders and plots the combined
-        distribution of pixel values across all channels in subplots.
+        Plotet die Pixelverteilung jeder Partition, indem alle Bilder auf einen Vektor
+        abgeflacht werden und die kombinierte Verteilung der Pixelwerte über alle
+        Kanäle in Subplots dargestellt wird.
         """
+
+        dataloader_types = ["train", "val", "test"]
+
         fig, axes = plt.subplots(
             1, len(dataloader_types), figsize=(5 * len(dataloader_types), 5), dpi=200
-        )  # Adjust subplot size dynamically based on the number of dataloaders
+        )
 
         for i, dataloader_type in enumerate(dataloader_types):
             dataloader = self._get_dataloader()[dataloader_type]
             all_pixels = []
+            image_count = 0
 
-            # Collecting pixel values
+            # Pixelwerte aller Bilder in einer Liste speichern
             for batch in dataloader:
                 images, labels = batch
-                # Flatten all pixels for each image in the batch, then concatenate them into one large tensor
-                flattened_pixels = images.view(
-                    images.shape[0], -1
-                )  # Flatten each image
+                image_count += images.size(0)  # Anzahl der Bilder im Batch
+                # Pixelwerte der Bilder abflachen
+                flattened_pixels = images.view(images.shape[0], -1)
                 all_pixels.extend(flattened_pixels)
 
-            # Convert list of tensors to one large tensor
+            # Alle Pixelwerte in einem Tensor zusammenführen
             all_pixels = torch.cat(all_pixels, dim=0)
 
-            # Convert tensor to numpy array and flatten it to 1D
+            # Tensor in Numpy Array umwandeln und Histogramm plotten
             axes[i].hist(
                 all_pixels.numpy().flatten(),
                 bins=binsize,
@@ -153,9 +158,16 @@ class ExplorativeDataAnalysis:
                 color="blue",
                 density=density,
             )
-            axes[i].set_title(f"{dataloader_type.capitalize()} Datensatz", fontsize=16)
+
+            axes[i].set_title(
+                f"{dataloader_type.capitalize()} Datensatz ({image_count} Bilder)",
+                fontsize=16,
+            )
             axes[i].set_xlabel("Pixel Wert")
-            axes[i].set_ylabel("Absolute Häufigkeit")
+            if density:
+                axes[i].set_ylabel("Relative Häufigkeit")
+            else:
+                axes[i].set_ylabel("Absolute Häufigkeit")
 
         fig.suptitle(
             f"Verteilung der Pixelwerte (Binsize: {binsize}) \n {dataset}",
@@ -165,7 +177,6 @@ class ExplorativeDataAnalysis:
         plt.tight_layout()
         plt.show()
 
-    # caculate for each partition train, val, test the mean of the pixel values for the position of the pixel values over all channels and images
     def mean_pixel_values(self):
         """
         Berechnet den Mittelwert der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
@@ -173,6 +184,7 @@ class ExplorativeDataAnalysis:
         dataloader_types = ["train", "val", "test"]
 
         dict_mean_pixel_values_per_dataloader = {}
+        image_counts = {}  # Dict, um Anzahl der Bilder pro Partition zu speichern
 
         for dataloader_type in dataloader_types:
             dataloader = self._get_dataloader()[dataloader_type]
@@ -200,39 +212,43 @@ class ExplorativeDataAnalysis:
                 pixel_sum / count_images
             )
 
-        return dict_mean_pixel_values_per_dataloader
+            image_counts[dataloader_type] = count_images
+
+        return dict_mean_pixel_values_per_dataloader, image_counts
 
     def plot_mean_pixel_heatmaps_together(self):
         """
-        Visualisiert die Mittelwerte der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
-        Nutzt dabei die Methode self.mean_pixel_values(), um die Heatmaps zu erstellen
+        Visualizes the mean pixel values by creating heatmaps for each data partition.
+        Uses self.mean_pixel_values() to get the mean values and counts of images.
         """
 
-        mean_pixel_values = self.mean_pixel_values()
-        # Subplots erstellen für die unterschiedlichen Datenpartitionen
+        mean_pixel_values, counts = self.mean_pixel_values()
         num_plots = len(mean_pixel_values)
         fig = make_subplots(
-            rows=1, cols=num_plots, subplot_titles=list(mean_pixel_values.keys())
+            rows=1,
+            cols=num_plots,
+            subplot_titles=[
+                f"{key.capitalize()} ({counts[key]} Bilder)"
+                for key in mean_pixel_values.keys()
+            ],
         )
 
-        # Für die unterschiedlichen Datenpartitionen Heatmaps hinzufügen
         col_index = 1
         for dataloader_type, pixel_values in mean_pixel_values.items():
-            pixel_values_np = pixel_values.numpy()  # Tensor in Numpy Array umwandeln
-
+            pixel_values_np = pixel_values.numpy()
             fig.add_trace(
                 go.Heatmap(
                     z=pixel_values_np,
                     colorscale="Greys",
+                    showscale=False,
                 ),
                 row=1,
                 col=col_index,
             )
             col_index += 1
 
-        # Layout anpassen
         fig.update_layout(
-            title_text="Differenzenbilder der unterschiedlichen Datenpartitionen",
+            title_text=f"Differenzenbilder der Pixelmittelwerte über Datenpartition für {self.dataset} ",
             height=400,
             width=300 * num_plots,
         )
