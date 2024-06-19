@@ -221,7 +221,6 @@ class ExplorativeDataAnalysis:
         Visualizes the mean pixel values by creating heatmaps for each data partition.
         Uses self.mean_pixel_values() to get the mean values and counts of images.
         """
-
         mean_pixel_values, counts = self.mean_pixel_values()
         num_plots = len(mean_pixel_values)
         fig = make_subplots(
@@ -236,6 +235,9 @@ class ExplorativeDataAnalysis:
         col_index = 1
         for dataloader_type, pixel_values in mean_pixel_values.items():
             pixel_values_np = pixel_values.numpy()
+
+            # Drehe die Pixelwerte um 180 Grad
+            pixel_values_np = np.flipud(pixel_values_np)
             fig.add_trace(
                 go.Heatmap(
                     z=pixel_values_np,
