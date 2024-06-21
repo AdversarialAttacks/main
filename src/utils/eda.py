@@ -195,15 +195,10 @@ class ExplorativeDataAnalysis:
             for images, _ in dataloader:
                 # images Dimension: [batch_size, 3, 244, 244] -> Werte identisch über alle Channels
 
-                if pixel_sum is None:
-                    # Mittelwert über alle Channels
-                    mean_over_channels = images.mean(dim=1)
-                    # Summiere alle Pixelwerte über alle Bilder im Batch
-                    pixel_sum = mean_over_channels.sum(dim=0)
-                else:
-                    mean_over_channels = images.mean(dim=1)
-                    pixel_sum = mean_over_channels.sum(dim=0)
-
+                # Channel auf eine Dimensino reduzieren [batch_size, 1 224, 224]
+                mean_over_channels = images.mean(dim=1)
+                # Addiere die Pixelwerte über alle Bilder im Batch
+                pixel_sum += mean_over_channels.sum(dim=0)
                 # Anzahl der Bilder im Batch addieren
                 count_images += images.size(0)
 
@@ -223,36 +218,31 @@ class ExplorativeDataAnalysis:
         """
         mean_pixel_values, counts = self.mean_pixel_values()
         num_plots = len(mean_pixel_values)
-        fig = make_subplots(
-            rows=1,
-            cols=num_plots,
-            subplot_titles=[
-                f"{key.capitalize()} ({counts[key]} Bilder)"
-                for key in mean_pixel_values.keys()
-            ],
-        )
 
-        col_index = 1
-        for dataloader_type, pixel_values in mean_pixel_values.items():
+        # Set up the figure and axes
+        fig, axes = plt.subplots(1, num_plots, figsize=(5 * num_plots, 5))
+
+        if num_plots == 1:
+            axes = [axes]  # Ensure axes is iterable even with a single subplot
+
+        for ax, (dataloader_type, pixel_values) in zip(axes, mean_pixel_values.items()):
             pixel_values_np = pixel_values.numpy()
 
-            # Drehe die Pixelwerte um 180 Grad
-            pixel_values_np = np.flipud(pixel_values_np)
-            fig.add_trace(
-                go.Heatmap(
-                    z=pixel_values_np,
-                    colorscale="Greys",
-                    showscale=False,
-                ),
-                row=1,
-                col=col_index,
+            # Flip the pixel values upside down
+            pixel_values_np = pixel_values_np
+
+            ax.imshow(pixel_values_np, cmap="Greys")
+            ax.set_title(
+                f"{dataloader_type.capitalize()} ({counts[dataloader_type]} Bilder)",
+                fontsize=16,
+                y=1.02,
             )
-            col_index += 1
+            ax.axis("off")  # Hide the axes
 
-        fig.update_layout(
-            title_text=f"Differenzenbilder der Pixelmittelwerte über Datenpartition für {self.dataset} ",
-            height=400,
-            width=300 * num_plots,
+        fig.suptitle(
+            f"Differenzenbilder der Pixelmittelwerte über Datenpartition für {self.dataset}",
+            fontsize=20,
+            y=1.02,
         )
-
-        fig.show()
+        plt.tight_layout()
+        plt.show()
