@@ -38,9 +38,13 @@ dl-brain-tumor:
 
 ## Download Models from Weights and Biases
 download_models:
+	PYTHONPATH=/home/ubuntu/main
 	python3 src/utils/download.py
 
-## Setup Lambda Cloud for Training
+## Setup Lambda Cloud for Training 
+## git clone https://github.com/AdversarialAttacks/main 
+## cd main
+## Drop .kaggle folder in the root of the project
 lambda-setup:
 	mkdir ../.kaggle
 	mv kaggle.json ../.kaggle/kaggle.json

@@ -1,7 +1,6 @@
 import os
 import wandb
 from tqdm import tqdm
-from src.utils.evaluation import WeightsandBiasEval
 
 
 def download_models(entity, project):
@@ -12,17 +11,32 @@ def download_models(entity, project):
         best_models = evaluator.get_best_models()
 
         for idx, metadata in tqdm(
-            best_models.iterrows(), desc="Model - Dataset Pair", position=0, total=len(best_models)
+            best_models.iterrows(),
+            desc="Model - Dataset Pair",
+            position=0,
+            total=len(best_models),
         ):
-            print(f"\n---\nPair: {idx} - Model: {metadata.model} - Dataset: {metadata.dataset}")
-            model_artifact = wandb.Api().artifact(f"{entity}/{project}/model-{metadata.id}:best", type="model")
-            model_path = model_artifact.file(root=f"models/{metadata.model}-{metadata.dataset}/")
-            metadata.to_json(f"models/{metadata.model}-{metadata.dataset}/metadata.json")
+            print(
+                f"\n---\nPair: {idx} - Model: {metadata.model} - Dataset: {metadata.dataset}"
+            )
+            model_artifact = wandb.Api().artifact(
+                f"{entity}/{project}/model-{metadata.id}:best", type="model"
+            )
+            model_path = model_artifact.file(
+                root=f"models/{metadata.model}-{metadata.dataset}/"
+            )
+            metadata.to_json(
+                f"models/{metadata.model}-{metadata.dataset}/metadata.json"
+            )
 
     return models
 
 
 if __name__ == "__main__":
+    from evaluation import WeightsandBiasEval
+
     ENTITY = "24FS_I4DS27"
     PROJECT = "baselines"
     download_models(ENTITY, PROJECT)
+else:
+    from src.utils.evaluation import WeightsandBiasEval
