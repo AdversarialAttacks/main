@@ -20,3 +20,9 @@ def download_models(entity, project):
             metadata.to_json(f"models/{metadata.model}-{metadata.dataset}/metadata.json")
 
     return models
+
+
+if __name__ == "__main__":
+    ENTITY = "24FS_I4DS27"
+    PROJECT = "baselines"
+    download_models(ENTITY, PROJECT)

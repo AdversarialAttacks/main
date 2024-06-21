@@ -15,6 +15,8 @@ help:
 	@echo "		Download Brain Tumor MRI Dataset"
 	@echo "lambda-setup"
 	@echo "		Setup Lambda Cloud for Training"
+	@echo "download_models"
+	@echo "		Download Models from Weights and Biases"
 	@echo ""
 
 ## Install Python Dependencies
@@ -41,6 +43,10 @@ lambda-setup:
 	make reqs
 	make dl-brain-tumor
 	make dl-covid
+
+## Download Models from Weights and Biases
+download_models:
+	python3 src/utils/download.py
 
 # Set the default goal to `help`
 .DEFAULT_GOAL := help
