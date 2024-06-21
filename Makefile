@@ -13,10 +13,10 @@ help:
 	@echo "		Download COVIDx-CXR4 Dataset"
 	@echo "dl-brain-tumor"
 	@echo "		Download Brain Tumor MRI Dataset"
-	@echo "lambda-setup"
-	@echo "		Setup Lambda Cloud for Training"
 	@echo "download_models"
 	@echo "		Download Models from Weights and Biases"
+	@echo "lambda-setup"
+	@echo "		Setup Lambda Cloud for Training"
 	@echo ""
 
 ## Install Python Dependencies
@@ -36,6 +36,10 @@ dl-covid:
 dl-brain-tumor:
 	kaggle datasets download -d sartajbhuvaji/brain-tumor-classification-mri -p data/raw/Brain-Tumor-MRI --unzip 
 
+## Download Models from Weights and Biases
+download_models:
+	python3 src/utils/download.py
+
 ## Setup Lambda Cloud for Training
 lambda-setup:
 	mkdir ../.kaggle
@@ -43,10 +47,7 @@ lambda-setup:
 	make reqs
 	make dl-brain-tumor
 	make dl-covid
-
-## Download Models from Weights and Biases
-download_models:
-	python3 src/utils/download.py
+	make download_models
 
 # Set the default goal to `help`
 .DEFAULT_GOAL := help
