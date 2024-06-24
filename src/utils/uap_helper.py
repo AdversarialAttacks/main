@@ -108,7 +108,7 @@ def fool_image(model, image, v, p, lambda_norm, t, eps, lr_uap, verbose, device)
 
         loss = loss_bce_inv_f(y_pred, y_adv) + lambda_norm * norm_f(v + delta_v)
         (
-            print(f"Loss: {loss}, Norm: {lambda_norm * norm_f(delta_v)}, InvBCE: {loss_bce_inv_f(y_pred, y_adv)}")
+            print(f"Loss: {loss}, Norm: {lambda_norm * norm_f(v + delta_v)}, InvBCE: {loss_bce_inv_f(y_pred, y_adv)}")
             if verbose
             else None
         )

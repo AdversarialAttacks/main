@@ -38,6 +38,7 @@ def get_datamodule(dataset, transform=get_transform(), num_workers=0, batch_size
             batch_size=batch_size,
             train_sample_size=0.05,
             train_shuffle=True,
+            train_positive_class_only=True,
             seed=seed,
         ).setup()
 
@@ -49,6 +50,7 @@ def get_datamodule(dataset, transform=get_transform(), num_workers=0, batch_size
             num_workers=num_workers,
             batch_size=batch_size,
             train_shuffle=True,
+            train_positive_class_only=True,
             seed=seed,
         ).setup()
 

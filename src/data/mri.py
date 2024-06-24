@@ -44,7 +44,7 @@ class MRIDataset(torch.utils.data.Dataset):
         if shuffle:
             self.data = self.data.sample(frac=1, random_state=self.seed).reset_index(drop=True)
         if self.positive_class_only:
-            self.data = self.data[self.data["label"] == "1"]
+            self.data = self.data[self.data["label"] == 1]
 
     def __len__(self):
         """Returns the number of items in the dataset."""
