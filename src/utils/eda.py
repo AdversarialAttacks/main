@@ -1,3 +1,4 @@
+import os
 import torch
 import torchvision
 import numpy as np
@@ -40,6 +41,7 @@ class ExplorativeDataAnalysis:
                 seed=self.seed,
                 train_sample_size=self.train_sample_size,
             ).setup()
+            self._get_image_counts(dataset)
 
         elif dataset == "mri_data":
             self.data = self.datamodule(
@@ -48,6 +50,32 @@ class ExplorativeDataAnalysis:
                 train_shuffle=self.shuffle,
                 seed=self.seed,
             ).setup()
+            self._get_image_counts(dataset)
+
+        if os.path.exists(f"temp/mean_pixel_values_train_{self.dataset}.pt"):
+            self.dict_mean_pixel_values_per_dataloader = {
+                "train": torch.load(f"temp/mean_pixel_values_train_{self.dataset}.pt"),
+                "val": torch.load(f"temp/mean_pixel_values_val_{self.dataset}.pt"),
+                "test": torch.load(f"temp/mean_pixel_values_test_{self.dataset}.pt"),
+            }
+        else:
+            self.dict_mean_pixel_values_per_dataloader, _ = self.mean_pixel_values(
+                save=True
+            )
+
+    def _get_image_counts(self, dataset):
+        if dataset == "covidx_data":
+            base_path = "data/raw/COVIDX-CXR4"
+        elif dataset == "mri_data":
+            base_path = "data/processed/Brain-Tumor-MRI"
+        else:
+            raise ValueError(f"Unknown dataset: {dataset}")
+
+        self.dict_image_counts = {
+            "train": len(os.listdir(f"{base_path}/train")),
+            "val": len(os.listdir(f"{base_path}/val")),
+            "test": len(os.listdir(f"{base_path}/test")),
+        }
 
     def _get_dataloader(self):
         return {
@@ -177,7 +205,7 @@ class ExplorativeDataAnalysis:
         plt.tight_layout()
         plt.show()
 
-    def mean_pixel_values(self):
+    def mean_pixel_values(self, save=False):
         """
         Berechnet den Mittelwert der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
         """
@@ -209,14 +237,22 @@ class ExplorativeDataAnalysis:
 
             image_counts[dataloader_type] = count_images
 
+            if save:
+                # save the mean pixel values as torch tensor in temp folder path
+                torch.save(
+                    dict_mean_pixel_values_per_dataloader[dataloader_type],
+                    f"temp/mean_pixel_values_{dataloader_type}_{self.dataset}.pt",
+                )
+
         return dict_mean_pixel_values_per_dataloader, image_counts
 
-    def plot_mean_pixel_heatmaps_together(self):
+    def plot_mean_pixel_heatmaps(self):
         """
         Visualizes the mean pixel values by creating heatmaps for each data partition.
         Uses self.mean_pixel_values() to get the mean values and counts of images.
         """
-        mean_pixel_values, counts = self.mean_pixel_values()
+        mean_pixel_values = self.dict_mean_pixel_values_per_dataloader
+        counts = self.dict_image_counts
         num_plots = len(mean_pixel_values)
 
         # Set up the figure and axes
@@ -240,9 +276,65 @@ class ExplorativeDataAnalysis:
             ax.axis("off")  # Hide the axes
 
         fig.suptitle(
-            f"Differenzenbilder der Pixelmittelwerte über Datenpartition für {self.dataset}",
+            f"Pixelmittelwerte über Datenpartition für {self.dataset}",
             fontsize=20,
             y=1.02,
         )
         plt.tight_layout()
+        plt.show()
+
+    def calculate_mean_pixel_difference(self):
+        """
+        Berechnet die Differenz der Pixelmittelwerte zwischen den Partitionen
+        """
+        mean_pixel_values = self.dict_mean_pixel_values_per_dataloader
+
+        mean_pixel_diff_train_val = (
+            mean_pixel_values["train"] - mean_pixel_values["val"]
+        )
+
+        mean_pixel_diff_train_test = (
+            mean_pixel_values["train"] - mean_pixel_values["test"]
+        )
+
+        mean_pixel_diff_val_test = mean_pixel_values["val"] - mean_pixel_values["test"]
+
+        # create a dictionary to store the mean pixel differences
+        mean_pixel_diff = {
+            "train vs. val": mean_pixel_diff_train_val,
+            "train vs. test": mean_pixel_diff_train_test,
+            "val vs. test": mean_pixel_diff_val_test,
+        }
+
+        return mean_pixel_diff
+
+    def plot_mean_pixel_difference_heatmaps(self):
+        """
+        Visualizes the mean pixel differences between the data partitions.
+        Uses self.calculate_mean_pixel_difference() to get the differences.
+        """
+        mean_pixel_diff = self.calculate_mean_pixel_difference()
+        num_plots = len(mean_pixel_diff)
+
+        # set up the figure and axes
+        fig, axes = plt.subplots(1, num_plots, figsize=(5 * num_plots, 5))
+
+        if num_plots == 1:
+            axes = [axes]
+
+        for ax, (diff_name, diff_values) in zip(axes, mean_pixel_diff.items()):
+            diff_values_np = diff_values.numpy()
+
+            img = ax.imshow(diff_values_np, cmap="coolwarm", vmin=-255, vmax=255)
+            ax.set_title(f"Vergleich von: {diff_name}", fontsize=16, y=1.02)
+            ax.axis("off")
+
+        cbar = fig.colorbar(img, ax=axes, orientation="horizontal", pad=0.2)
+
+        fig.suptitle(
+            f"Absolute Differenzenbilder der Pixelmittelwerte zwischen den Partitionen für {self.dataset}",
+            fontsize=20,
+            y=1.02,
+        )
+
         plt.show()

@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
+from matplotlib.colors import SymLogNorm
+
 
 from src.utils.uap_helper import get_datamodule
 
@@ -46,25 +48,45 @@ class UAP_EDA:
         # Tensor shape: torch.Size([5, 5, 3, 224, 224]) -> 5 Robustification Levels, 5 UAPs, 3 channels, 224x224 pixels
         return self.uaps_tensor
 
-    def _visualize_uaps_tensor(self):
+    def _visualize_uaps_tensor(self, transform=None):
         for i in range(self.uaps_tensor.shape[0]):
             uap = self.uaps_tensor[i]
             fig, ax = plt.subplots(
                 1, self.uaps_tensor.shape[0], figsize=(3 * self.uaps_tensor.shape[0], 3)
             )
+
             for j in range(self.uaps_tensor.shape[1]):
                 perturbations = uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int)
                 vmax = np.abs(perturbations).max()
-                ax[j].imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
-                ax[j].axis("off")
-                ax[j].set_title(f"UAP {j+1}")
+                symlognorm = SymLogNorm(
+                    linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax
+                )
 
+                if transform == "symlog":
+                    ax[j].imshow(
+                        perturbations,
+                        cmap="coolwarm",
+                        norm=symlognorm,
+                    )
+                    ax[j].axis("off")
+                    ax[j].set_title(f"UAP {j+1}")
+                else:
+                    ax[j].imshow(
+                        perturbations,
+                        vmin=-vmax,
+                        vmax=vmax,
+                        cmap="coolwarm",
+                    )
+                    ax[j].axis("off")
+                    ax[j].set_title(f"UAP {j+1}")
+
+            transform_name = transform if transform else "None"
             fig.suptitle(
-                f"Heatmaps of UAPs for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {i})"
+                f"Heatmaps of UAPs for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {i}, Transformation: {transform_name})"
             )
             plt.show()
 
-    def _visualize_uaps_tensor2(self):
+    def _visualize_uaps_tensor2(self, transform=None):
         n_robust_levels = self.uaps_tensor.shape[0]  # Number of robustification levels
         n_uaps = self.uaps_tensor.shape[1]  # Number of UAPs
 
@@ -81,24 +103,44 @@ class UAP_EDA:
                 perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
                 vmax = np.abs(perturbations).max()
 
+                symlognorm = SymLogNorm(
+                    linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax
+                )
+
                 # Access subplot for current robustification level
                 ax = axs[i] if n_robust_levels > 1 else axs
-                ax.imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
-                ax.axis("off")
-                ax.set_title(f"Robustification Level {i+1}")
 
+                if transform == "symlog":
+                    ax.imshow(
+                        perturbations,
+                        cmap="coolwarm",
+                        norm=symlognorm,
+                    )
+                    ax.axis("off")
+                    ax.set_title(f"Robustification Level {i+1}")
+                else:
+                    ax.imshow(
+                        perturbations,
+                        vmin=-vmax,
+                        vmax=vmax,
+                        cmap="coolwarm",
+                    )
+                    ax.axis("off")
+                    ax.set_title(f"Robustification Level {i+1}")
+
+            transform_name = transform if transform else "None"
             # Set the title for the current UAP's figure
             fig.suptitle(
-                f"Heatmap of UAP {j+1} for {self.model} on {self.dataset} (n={self.n_image})"
+                f"Heatmap of UAP {j+1} for {self.model} on {self.dataset} (n={self.n_image}), Transformation: {transform_name}"
             )
             plt.tight_layout()
             plt.show()
 
-    def visualize_uaps_tensor(self, progress=False):
+    def visualize_uaps_tensor(self, progress=False, transform=None):
         if progress:
-            self._visualize_uaps_tensor()
+            self._visualize_uaps_tensor(transform=transform)
         else:
-            self._visualize_uaps_tensor2()
+            self._visualize_uaps_tensor2(transform=transform)
 
     def visualize_uap_violinplot(self, robustification_level=None):
         data = []
@@ -140,7 +182,9 @@ class UAP_EDA:
         plt.grid(True)
         plt.show()
 
-    def visualize_multiple_uaps(self, uap_indices, robustification_level):
+    def visualize_multiple_uaps(
+        self, uap_indices, robustification_level, transform=None
+    ):
         uaps = self._read_perturbations(robustification_level)
         num_uaps = len(uap_indices)
         fig, axes = plt.subplots(
@@ -152,11 +196,28 @@ class UAP_EDA:
             perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
             vmax = np.abs(perturbations).max()
 
+            symlognorm = SymLogNorm(
+                linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax
+            )
+
             ax = axes[i] if num_uaps > 1 else axes
-            ax.imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
+
+            if transform == "symlog":
+                im = ax.imshow(
+                    perturbations,
+                    cmap="coolwarm",
+                    norm=symlognorm,
+                )
+            else:
+                im = ax.imshow(
+                    perturbations,
+                    vmin=-vmax,
+                    vmax=vmax,
+                    cmap="coolwarm",
+                )
             ax.axis("off")
             ax.set_title(
-                f"Heatmap of UAP {idx} for {self.model} on {self.dataset} \n (n={self.n_image}, Robustification Level {robustification_level})"
+                f"Heatmap of UAP {idx} for {self.model} on {self.dataset} \n (n={self.n_image}, Robustification Level {robustification_level}), Transformation: {transform}"
             )
 
         plt.tight_layout()
