@@ -103,8 +103,8 @@ def pipeline(
         modelfolder = f"{modelname}-{dataset}-n_{n}-robustification_{current_robustification}"
 
         # check if the model has already been robustified and evaluated, if so, skip current iteration
-        metrics_path_i = f"robustified_models/{modelfolder}/06_eval_robustified_test_uap_{i-1}/metrics.csv"
-        metrics_path_next = f"robustified_models/{modelfolder}/06_eval_robustified_test_uap_{i}/metrics.csv"
+        metrics_path_i = f"robustified_models/{modelfolder}/06_eval_robustified_val_uap_{i-1}/metrics.csv"
+        metrics_path_next = f"robustified_models/{modelfolder}/06_eval_robustified_val_uap_{i}/metrics.csv"
         if os.path.exists(metrics_path_i) and not os.path.exists(metrics_path_next):
             print(f"Skipping robustification {current_robustification}, since already exists") 
 
@@ -151,11 +151,11 @@ def pipeline(
         perturbations = perturbations.detach()
         loggerUAP.save()
 
-        # evaluate model on testdata
-        loggerEvalUnrobustifiedTest = pl_loggers.CSVLogger(
+        # evaluate model on valdata
+        loggerEvalUnrobustifiedVal = pl_loggers.CSVLogger(
             "robustified_models",
             name=modelfolder,
-            version="02_eval_unrobustified_test",
+            version="02_eval_unrobustified_val",
             flush_logs_every_n_steps=1,
         )
         datamodule = get_datamodule(
@@ -166,12 +166,44 @@ def pipeline(
             seed=seed,
         )
         trainer = Trainer(
+            logger=loggerEvalUnrobustifiedVal,
+        )
+        trainer.validate(model, datamodule.val_dataloader())
+
+        # evaluate model on testdata
+        loggerEvalUnrobustifiedTest = pl_loggers.CSVLogger(
+            "robustified_models",
+            name=modelfolder,
+            version="02_eval_unrobustified_test",
+            flush_logs_every_n_steps=1,
+        )
+        trainer = Trainer(
             logger=loggerEvalUnrobustifiedTest,
         )
         trainer.test(model, datamodule.test_dataloader())
 
-        # evaluate model on testdata + uaps
+        # evaluate model on val/testdata + uaps
         for perturbation_idx in range(i):
+            # val
+            loggerEvalUnrobustifiedValUAP = pl_loggers.CSVLogger(
+                "robustified_models",
+                name=modelfolder,
+                version=f"03_eval_unrobustified_val_uap_{perturbation_idx}",
+                flush_logs_every_n_steps=1,
+            )
+            datamodule = get_datamodule(
+                dataset=dataset,
+                transform=get_transform(perturbations, p=1, idx=perturbation_idx),
+                num_workers=num_workers,
+                batch_size=32,
+                seed=seed,
+            )
+            trainer = Trainer(
+                logger=loggerEvalUnrobustifiedValUAP,
+            )
+            trainer.validate(model, datamodule.val_dataloader())
+
+            # test
             loggerEvalUnrobustifiedTestUAP = pl_loggers.CSVLogger(
                 "robustified_models",
                 name=modelfolder,
@@ -244,11 +276,11 @@ def pipeline(
         model.freeze()
         model.eval()
 
-        # evaluate robustified model on testdata
-        loggerEvalRobustifiedTest = pl_loggers.CSVLogger(
+        # evaluate robustified model on valdata
+        loggerEvalRobustifiedVal = pl_loggers.CSVLogger(
             "robustified_models",
             name=modelfolder,
-            version="05_eval_robustified_test",
+            version="05_eval_robustified_val",
             flush_logs_every_n_steps=1,
         )
         datamodule = get_datamodule(
@@ -259,16 +291,29 @@ def pipeline(
             seed=seed,
         )
         trainer = Trainer(
+            logger=loggerEvalRobustifiedVal,
+        )
+        trainer.validate(model, datamodule.val_dataloader())
+
+        # evaluate robustified model on testdata
+        loggerEvalRobustifiedTest = pl_loggers.CSVLogger(
+            "robustified_models",
+            name=modelfolder,
+            version="05_eval_robustified_test",
+            flush_logs_every_n_steps=1,
+        )
+        trainer = Trainer(
             logger=loggerEvalRobustifiedTest,
         )
         trainer.test(model, datamodule.test_dataloader())
 
-        # evaluate robustified model on testdata + uaps
+        # evaluate robustified model on val/testdata + uaps
         for perturbation_idx in range(i):
-            loggerEvalRobustifiedTestUAP = pl_loggers.CSVLogger(
+            # val
+            loggerEvalRobustifiedValUAP = pl_loggers.CSVLogger(
                 "robustified_models",
                 name=modelfolder,
-                version=f"06_eval_robustified_test_uap_{perturbation_idx}",
+                version=f"06_eval_robustified_val_uap_{perturbation_idx}",
                 flush_logs_every_n_steps=1,
             )
             datamodule = get_datamodule(
@@ -277,6 +322,18 @@ def pipeline(
                 num_workers=num_workers,
                 batch_size=32,
                 seed=seed,
+            )
+            trainer = Trainer(
+                logger=loggerEvalRobustifiedValUAP,
+            )
+            trainer.validate(model, datamodule.val_dataloader())
+
+            # test
+            loggerEvalRobustifiedTestUAP = pl_loggers.CSVLogger(
+                "robustified_models",
+                name=modelfolder,
+                version=f"06_eval_robustified_test_uap_{perturbation_idx}",
+                flush_logs_every_n_steps=1,
             )
             trainer = Trainer(
                 logger=loggerEvalRobustifiedTestUAP,

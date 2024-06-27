@@ -170,11 +170,11 @@ class ImageClassifier(L.LightningModule):
         for metric, value in metrics_dict.items():
             self.log(f"{state}_{metric}", value)
 
-        if state == "test" and isinstance(self.logger, pl_loggers.CSVLogger):
+        if state in ["test", "val"] and isinstance(self.logger, pl_loggers.CSVLogger):
             predictions = predictions.cpu().detach().numpy()
             targets = targets.cpu().detach().numpy()
             pd.DataFrame({"predictions": predictions, "targets": targets}).to_csv(
-                f"{self.logger.log_dir}/test_predictions.csv", index=True
+                f"{self.logger.log_dir}/{state}_predictions.csv", index=True
             )
 
         self.logging[f"{state}_prediction"] = []
