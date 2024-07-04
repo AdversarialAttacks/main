@@ -1,10 +1,8 @@
 import os
 import torch
 import torchvision
-import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 
 class ExplorativeDataAnalysis:
@@ -17,6 +15,7 @@ class ExplorativeDataAnalysis:
         dataset="covidx_data",
         train_sample_size=0.05,
         shuffle=True,
+        train_subsample=False,
     ):
 
         self.datamodule = datamodule
@@ -26,6 +25,7 @@ class ExplorativeDataAnalysis:
         self.batchsize = batchsize
         self.seed = seed
         self.shuffle = shuffle
+        self.train_subsample = train_subsample
 
         self.transform = torchvision.transforms.Compose(
             [
@@ -59,8 +59,8 @@ class ExplorativeDataAnalysis:
                 "test": torch.load(f"temp/mean_pixel_values_test_{self.dataset}.pt"),
             }
         else:
-            self.dict_mean_pixel_values_per_dataloader, _ = self.mean_pixel_values(
-                save=True
+            self.dict_mean_pixel_values_per_dataloader, self.dict_image_subcount = (
+                self.mean_pixel_values(save=True, subsample=self.train_subsample)
             )
 
     def _get_image_counts(self, dataset):
@@ -205,7 +205,7 @@ class ExplorativeDataAnalysis:
         plt.tight_layout()
         plt.show()
 
-    def mean_pixel_values(self, save=False):
+    def mean_pixel_values(self, save=False, subsample=False):
         """
         Berechnet den Mittelwert der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
         """
@@ -222,13 +222,17 @@ class ExplorativeDataAnalysis:
 
             for images, _ in dataloader:
                 # images Dimension: [batch_size, 3, 244, 244] -> Werte identisch über alle Channels
-
                 # Channel auf eine Dimensino reduzieren [batch_size, 1 224, 224]
                 mean_over_channels = images.mean(dim=1)
                 # Addiere die Pixelwerte über alle Bilder im Batch
                 pixel_sum += mean_over_channels.sum(dim=0)
                 # Anzahl der Bilder im Batch addieren
                 count_images += images.size(0)
+
+                if subsample:
+                    limit = 394 if self.dataset == "mri_data" else 8482
+                    if count_images >= limit:
+                        break
 
             # Speichern des Mittelwertes der Pixelwerte für die Position der Pixelwerte über alle Channels und Bilder
             dict_mean_pixel_values_per_dataloader[dataloader_type] = (
@@ -252,7 +256,11 @@ class ExplorativeDataAnalysis:
         Uses self.mean_pixel_values() to get the mean values and counts of images.
         """
         mean_pixel_values = self.dict_mean_pixel_values_per_dataloader
-        counts = self.dict_image_counts
+        if self.train_subsample:
+            counts = self.dict_image_subcount
+        else:
+            counts = self.dict_image_counts
+
         num_plots = len(mean_pixel_values)
 
         # Set up the figure and axes
@@ -301,12 +309,32 @@ class ExplorativeDataAnalysis:
 
         # create a dictionary to store the mean pixel differences
         mean_pixel_diff = {
-            "train vs. val": mean_pixel_diff_train_val,
-            "train vs. test": mean_pixel_diff_train_test,
-            "val vs. test": mean_pixel_diff_val_test,
+            "train - val": mean_pixel_diff_train_val,
+            "train - test": mean_pixel_diff_train_test,
+            "val - test": mean_pixel_diff_val_test,
         }
 
         return mean_pixel_diff
+
+    def calculate_mean_pixel_difference_statistics(self):
+        """
+        Berechnet statistische Werte für die Differenzen der Pixelmittelwerte zwischen den Partitionen
+        """
+        mean_pixel_diff = self.calculate_mean_pixel_difference()
+
+        mean_pixel_diff_statistics = {}
+
+        for diff_name, diff_values in mean_pixel_diff.items():
+            mean_pixel_diff_statistics[diff_name] = {
+                "mean": diff_values.mean().item(),
+                "std": diff_values.std().item(),
+                "min": diff_values.min().item(),
+                "max": diff_values.max().item(),
+            }
+
+        df = pd.DataFrame(mean_pixel_diff_statistics).T
+
+        return df
 
     def plot_mean_pixel_difference_heatmaps(self):
         """
@@ -325,14 +353,14 @@ class ExplorativeDataAnalysis:
         for ax, (diff_name, diff_values) in zip(axes, mean_pixel_diff.items()):
             diff_values_np = diff_values.numpy()
 
-            img = ax.imshow(diff_values_np, cmap="coolwarm", vmin=-255, vmax=255)
+            img = ax.imshow(diff_values_np, cmap="coolwarm", vmin=-55, vmax=55)
             ax.set_title(f"Vergleich von: {diff_name}", fontsize=16, y=1.02)
             ax.axis("off")
 
         cbar = fig.colorbar(img, ax=axes, orientation="horizontal", pad=0.2)
 
         fig.suptitle(
-            f"Absolute Differenzenbilder der Pixelmittelwerte zwischen den Partitionen für {self.dataset}",
+            f"Differenzenbilder der Pixelmittelwerte zwischen den Partitionen für {self.dataset}",
             fontsize=20,
             y=1.02,
         )
