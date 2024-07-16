@@ -82,7 +82,7 @@ class UAP_EDA:
 
             transform_name = transform if transform else "None"
             fig.suptitle(
-                f"Heatmaps of UAPs for {self.model} on {self.dataset} (n={self.n_image}, Robustification Level {i}, Transformation: {transform_name})"
+                f"UAP Heatmap für {self.model} auf {self.dataset} (n={self.n_image}, Robustification Level {i}, Transformation: {transform_name})"
             )
             plt.show()
 
@@ -131,7 +131,7 @@ class UAP_EDA:
             transform_name = transform if transform else "None"
             # Set the title for the current UAP's figure
             fig.suptitle(
-                f"Heatmap of UAP {j+1} for {self.model} on {self.dataset} (n={self.n_image}), Transformation: {transform_name}"
+                f"Heatmap UAP {j+1} von {self.model} auf {self.dataset} (n={self.n_image}), Transformation: {transform_name}"
             )
             plt.tight_layout()
             plt.show()
@@ -171,19 +171,23 @@ class UAP_EDA:
         plt.ylabel("Perturbation Value")
         if robustification_level is None:
             plt.title(
-                f"Violinplot Distribution of UAP Pixel Value Across All Robustification Levels\n"
-                f"Model: {self.model} on {self.dataset} - (n={self.n_image})"
+                f"Violinplot Verteilung der UAP Pixelwerte über alle Robustifikationslevel\n"
+                f"Modell: {self.model} auf {self.dataset} - (n={self.n_image})"
             )
         else:
             plt.title(
-                f"Violinplot Distribution of UAP Pixel Value for Robustification Level {robustification_level}\n"
-                f"Model: {self.model} on {self.dataset} - (n={self.n_image})"
+                f"Violinplot Verteilung der UAP Pixelwerte über alle Robustifikationslevel {robustification_level}\n"
+                f"Modell: {self.model} auf {self.dataset} - (n={self.n_image})"
             )
         plt.grid(True)
         plt.show()
 
     def visualize_multiple_uaps(
-        self, uap_indices, robustification_level, transform=None
+        self,
+        uap_indices,
+        robustification_level,
+        transform=None,
+        show_title=None,
     ):
         uaps = self._read_perturbations(robustification_level)
         num_uaps = len(uap_indices)
@@ -216,9 +220,10 @@ class UAP_EDA:
                     cmap="coolwarm",
                 )
             ax.axis("off")
-            ax.set_title(
-                f"Heatmap of UAP {idx} for {self.model} on {self.dataset} \n (n={self.n_image}, Robustification Level {robustification_level}), Transformation: {transform}"
-            )
+            if show_title:
+                ax.set_title(
+                    f"Heatmap von UAP {idx} von {self.model} auf {self.dataset} \n (n={self.n_image}, Robustifikationslevel {robustification_level}), Transformation: {transform}"
+                )
 
         plt.tight_layout()
         plt.show()
