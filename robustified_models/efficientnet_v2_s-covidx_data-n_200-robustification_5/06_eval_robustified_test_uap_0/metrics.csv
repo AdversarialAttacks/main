@@ -1,0 +1,2 @@
+epoch,step,test_BinaryAUROC,test_BinaryAccuracy,test_BinaryF1Score,test_BinaryPrecision,test_BinaryRecall,test_BinarySpecificity,test_loss
+0,0,0.5662859678268433,0.5265267491340637,0.6438453197479248,0.5159914493560791,0.8559302091598511,0.19712331891059875,1.2851958274841309
