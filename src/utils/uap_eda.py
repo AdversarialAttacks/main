@@ -37,9 +37,7 @@ class UAP_EDA:
             if uap is not None:
                 uaps.append(uap)
             else:
-                print(
-                    f"Skipping tensor for robustification level {n_robustification} due to missing file."
-                )
+                print(f"Skipping tensor for robustification level {n_robustification} due to missing file.")
         return uaps
 
     def return_stacked_uap_tensor(self, max_robustification):
@@ -51,16 +49,12 @@ class UAP_EDA:
     def _visualize_uaps_tensor(self, transform=None):
         for i in range(self.uaps_tensor.shape[0]):
             uap = self.uaps_tensor[i]
-            fig, ax = plt.subplots(
-                1, self.uaps_tensor.shape[0], figsize=(3 * self.uaps_tensor.shape[0], 3)
-            )
+            fig, ax = plt.subplots(1, self.uaps_tensor.shape[0], figsize=(3 * self.uaps_tensor.shape[0], 3))
 
             for j in range(self.uaps_tensor.shape[1]):
                 perturbations = uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int)
                 vmax = np.abs(perturbations).max()
-                symlognorm = SymLogNorm(
-                    linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax
-                )
+                symlognorm = SymLogNorm(linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax)
 
                 if transform == "symlog":
                     ax[j].imshow(
@@ -92,20 +86,14 @@ class UAP_EDA:
 
         for j in range(n_uaps):  # Iterate through each UAP index
             # Create a figure for each UAP with subplots for each robustification level
-            fig, axs = plt.subplots(
-                1, n_robust_levels, figsize=(3 * n_robust_levels, 3)
-            )
+            fig, axs = plt.subplots(1, n_robust_levels, figsize=(3 * n_robust_levels, 3))
 
-            for i in range(
-                n_robust_levels
-            ):  # Iterate through each robustification level
+            for i in range(n_robust_levels):  # Iterate through each robustification level
                 uap = self.uaps_tensor[i][j]
                 perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
                 vmax = np.abs(perturbations).max()
 
-                symlognorm = SymLogNorm(
-                    linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax
-                )
+                symlognorm = SymLogNorm(linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax)
 
                 # Access subplot for current robustification level
                 ax = axs[i] if n_robust_levels > 1 else axs
@@ -150,18 +138,14 @@ class UAP_EDA:
             for i in range(self.uaps_tensor.shape[0]):
                 uap = self.uaps_tensor[i]
                 for j in range(self.uaps_tensor.shape[1]):
-                    perturbations = (
-                        uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
-                    )
+                    perturbations = uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
                     data.append(perturbations)
                     labels.append(f"UAP {j+1} - Level {i}")
         else:
             # Visualize specific robustification level
             uap = self.uaps_tensor[robustification_level]
             for j in range(self.uaps_tensor.shape[1]):
-                perturbations = (
-                    uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
-                )
+                perturbations = uap[j].mean(dim=0).cpu().squeeze().numpy().astype(int).flatten()
                 data.append(perturbations)
                 labels.append(f"UAP {j+1} - Level {robustification_level}")
 
@@ -191,18 +175,14 @@ class UAP_EDA:
     ):
         uaps = self._read_perturbations(robustification_level)
         num_uaps = len(uap_indices)
-        fig, axes = plt.subplots(
-            1, num_uaps, figsize=(5 * num_uaps, 5)
-        )  # Adjust figure size based on number of UAPs
+        fig, axes = plt.subplots(1, num_uaps, figsize=(5 * num_uaps, 5))  # Adjust figure size based on number of UAPs
 
         for i, idx in enumerate(uap_indices):
             uap = uaps[idx]
             perturbations = uap.mean(dim=0).cpu().squeeze().numpy().astype(int)
             vmax = np.abs(perturbations).max()
 
-            symlognorm = SymLogNorm(
-                linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax
-            )
+            symlognorm = SymLogNorm(linthresh=0.03, linscale=0.03, vmin=-vmax, vmax=vmax)
 
             ax = axes[i] if num_uaps > 1 else axes
 
@@ -239,9 +219,7 @@ class UAP_EDA:
         elif datapartition == "test":
             dataloader = datamodule.test_dataloader()
         else:
-            raise ValueError(
-                "Invalid data partition. Choose from 'train', 'val', or 'test'."
-            )
+            raise ValueError("Invalid data partition. Choose from 'train', 'val', or 'test'.")
 
         for i, batch in enumerate(dataloader):
             if i == index:
@@ -267,9 +245,7 @@ class UAP_EDA:
         image_index=0,
         seed=42,
     ):
-        image = self.get_image(
-            datapartition=datapartition, index=image_index, seed=seed
-        )[0]
+        image = self.get_image(datapartition=datapartition, index=image_index, seed=seed)[0]
         uap = self.get_perturbation(uap_index, robustification_level)
 
         uap = uap.mean(dim=0).numpy()  # Average over the channels
@@ -286,9 +262,7 @@ class UAP_EDA:
                 xaxis_title="Width",
                 yaxis_title="Height",
                 zaxis_title="Pixel Value",
-                zaxis=dict(
-                    range=[-50, 255 * 2]
-                ),  # Assuming you want to clamp between 0 and 255
+                zaxis=dict(range=[-50, 255 * 2]),  # Assuming you want to clamp between 0 and 255
             ),
             autosize=True,
             width=800,
@@ -312,59 +286,59 @@ class UAP_EDA:
             v = self.uaps_tensor[robustification_level][uap_index].cpu()
 
             # Prepare subplots for the current UAP index
-            fig, axs = plt.subplots(1, 5, figsize=(25, 5))
+            fig, axs = plt.subplots(1, 5, figsize=(22, 5))
 
             # Original Image
             original_image = image.cpu().squeeze().permute(1, 2, 0).numpy().astype(int)
             axs[0].imshow(original_image)
             axs[0].axis("off")
-            axs[0].set_title("Ursprungs Bild")
+            axs[0].set_title("Ursprungsbild", fontsize=16)
 
             # Original Image + UAP
             perturbed_image = image + v
             perturbed_image = perturbed_image.clamp(0, 255)
-            perturbed_image = (
-                perturbed_image.cpu().squeeze().permute(1, 2, 0).numpy().astype(int)
-            )
-            axs[1].imshow(perturbed_image)
-            axs[1].axis("off")
-            axs[1].set_title("Perturbiertes Bild")
+            perturbed_image = perturbed_image.cpu().squeeze().permute(1, 2, 0).numpy().astype(int)
+            axs[2].imshow(perturbed_image)
+            axs[2].axis("off")
+            axs[2].set_title("Perturbiertes Bild", fontsize=16)
 
             # UAP Visualization
             perturbations = v.mean(dim=0).cpu().squeeze().numpy().astype(int)
             vmax = np.abs(perturbations).max()
-            im = axs[2].imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
-            axs[2].axis("off")
-            axs[2].set_title("Universal Adversarial Perturbation")
-            cbar = plt.colorbar(
-                im, ax=axs[2], fraction=0.046, pad=0.01, location="bottom"
-            )
-            cbar.set_label("Anpassende Helligkeit", fontsize=12)
+            im = axs[1].imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
+            axs[1].axis("off")
+            axs[1].set_title("Universal Adversarial Perturbation", fontsize=16)
+            cbar = plt.colorbar(im, ax=axs[2], fraction=0.046, pad=0.01, location="bottom")
+            cbar.set_label("Angepasste Helligkeit", fontsize=12)
 
             # UAP Violinplot
             axs[3].violinplot(v.flatten(), showmedians=True, showmeans=True)
             axs[3].set_title("UAP Violinplot", fontsize=16)
-            axs[3].set_ylabel("Perturbations Wert", fontsize=12)
+            axs[3].set_ylabel("Angepasste Helligkeit", fontsize=12)
+            axs[3].set_xlabel("Häufigkeit", fontsize=12)
+            axs[3].yaxis.set_label_position("right")
+            axs[3].set_xticks([])
 
             # UAP Stats with hist plot
             axs[4].hist(v.flatten(), bins=100, color="grey", alpha=0.7)
             axs[4].set_title("UAP Histogramm", fontsize=16)
             axs[4].set_yticks([])
             axs[4].axis("on")
-            axs[4].set_xlabel("Perturbations Wert", fontsize=12)
+            axs[4].set_xlabel("Angepasste Helligkeit", fontsize=12)
             axs[4].set_ylabel("Häufigkeit", fontsize=12)
+            axs[4].yaxis.set_label_position("right")
 
             # Add overall title with statistics for each UAP
             plt.suptitle(
-                f"- Pixel Perturbation stats: min: {v.min().item():.2f}, max: {v.max().item():.2f}, σ: {v.std().item():.2f}, μ: {v.mean().item():.2f}",
-                fontsize=10,
+                f"- Perturbation stats: min: {v.min().item():.2f}, max: {v.max().item():.2f}, σ: {v.std().item():.2f}, μ: {v.mean().item():.2f}",
+                fontsize=12,
                 ha="left",
-                y=0.075,
-                x=0.145,
+                y=0.08,
+                x=0.012,
             )
 
-        plt.tight_layout()
-        plt.show()
+            plt.tight_layout()
+            plt.show()
 
     def visualize_uap_3d(self, uap_index=0, robustification_level=0):
         uap = self.uaps_tensor[robustification_level][uap_index].cpu()
