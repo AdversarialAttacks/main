@@ -1,7 +1,7 @@
 # 24FS_I4DS27: Adversarial Attacks
 
 Dies ist das Hauptrepository für die Bachelorarbeit 24FS_I4DS27: Adversarial Attacks. <br>
-Hier trainieren, validieren, attackieren, verteidigen und evaluiren wir unsere Modelle.
+Hier trainieren, validieren, attackieren, robustifizieren und evaluieren wir unsere Modelle.
 
 ## Setup
 
