@@ -1,8 +1,26 @@
 # Data
 data/
 temp/
+
 !src/data/
+
+# Dont Ignore the README.md file in the data folder
 !data/README.md
+
+# Dont Ignore the README.md file in the src folder
+!src/README.md
+
+# Dont Ignore the README.md file in the notebooks folder
+!notebooks/README.md
+
+# Dont Ignore the README.md file in the models folder
+!models/README.md
+
+
+
+
+# Ignore all png files
+**/*.png
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,jupyternotebooks
