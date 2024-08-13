@@ -308,7 +308,7 @@ class UAP_EDA:
             im = axs[1].imshow(perturbations, cmap="coolwarm", vmin=-vmax, vmax=vmax)
             axs[1].axis("off")
             axs[1].set_title("Universal Adversarial Perturbation", fontsize=16)
-            cbar = plt.colorbar(im, ax=axs[2], fraction=0.046, pad=0.01, location="bottom")
+            cbar = plt.colorbar(im, ax=axs[1], fraction=0.046, pad=0.01, location="bottom")
             cbar.set_label("Angepasste Helligkeit", fontsize=12)
 
             # UAP Violinplot
@@ -331,9 +331,9 @@ class UAP_EDA:
             # Add overall title with statistics for each UAP
             plt.suptitle(
                 f"- Perturbation stats: min: {v.min().item():.2f}, max: {v.max().item():.2f}, σ: {v.std().item():.2f}, μ: {v.mean().item():.2f}",
-                fontsize=12,
+                fontsize=10,
                 ha="left",
-                y=0.08,
+                y=0.05,
                 x=0.012,
             )
 
